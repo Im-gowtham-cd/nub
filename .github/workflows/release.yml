@@ -529,7 +529,9 @@ jobs:
       - name: Stamp canary version (uncommitted)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: bash
-        run: node scripts/set-version.mjs "${{ needs.verify.outputs.canary_version }}"
+        env:
+          CANARY_VERSION: ${{ needs.verify.outputs.canary_version }}
+        run: node scripts/set-version.mjs "$CANARY_VERSION"
 
       - name: Install cross
         if: matrix.cross
@@ -785,6 +787,10 @@ jobs:
           path: nub-pkg
       - name: Assert the built binary runs and reports the release version
         shell: bash
+        env:
+          # Hoisted from the run block: an expression expanding inside the
+          # script is zizmor error-level template injection; env is inert.
+          CANARY_VERSION: ${{ needs.verify.outputs.canary_version }}
         run: |
           set -euo pipefail
           BIN="nub-pkg/${{ matrix.bin }}"
@@ -807,9 +813,12 @@ jobs:
           # it runs + prints a non-empty semver-ish string.
           EXPECTED=""
           if [ "${{ github.event_name }}" = "push" ]; then
-            case "${{ github.ref }}" in
+            # $GITHUB_REF (the ambient env var), never the github.ref
+            # expression form — expressions expand into the script text
+            # (zizmor error-level template injection).
+            case "$GITHUB_REF" in
               refs/tags/*) EXPECTED="${GITHUB_REF_NAME#v}" ;;
-              *)           EXPECTED="${{ needs.verify.outputs.canary_version }}" ;;
+              *)           EXPECTED="$CANARY_VERSION" ;;
             esac
           fi
           if [ -n "$EXPECTED" ]; then
@@ -1128,11 +1137,29 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [verify, build, glibc-floor-guard, pre-publish-gate]
     runs-on: ubuntu-latest
+    permissions:
+      # Same grant as publish-npm (the job this mirrors): checkout reads; npm
+      # publish authenticates via OIDC trusted publishing, which mints its
+      # token from the job's OIDC identity (id-token: write). The workflow
+      # baseline is `permissions: {}`, so omitting this block deny-alls the
+      # job — the maiden canary run failed exactly here (npm PUT E404 from the
+      # unauthenticated fallback).
+      contents: read
+      id-token: write
     env:
       VERSION: ${{ needs.verify.outputs.canary_version }}
     steps:
-      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444  # v5
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
+        with:
+          persist-credentials: false
+      # ACCEPTED TRADEOFF (maintainer, 2026-07-24): zizmor's cache-poisoning
+      # audit flags publishing from a main-push-triggered workflow whose build
+      # jobs restore rust/pnpm caches — a poisoned Actions cache could in
+      # theory reach published canary bits. Accepted: the tag-path stable
+      # releases build from these same caches, and cold-building 8 platforms
+      # per push is not worth the surface reduction (bun/deno ship canaries
+      # the same way). setup-node is v5-pinned by SHA like every other action.
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # zizmor: ignore[cache-poisoning]
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
@@ -1213,11 +1240,18 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [verify, canary-publish-npm]
     runs-on: ubuntu-latest
+    permissions:
+      # Deletes + recreates the rolling release and the canary tag ref with
+      # GITHUB_TOKEN (same grant as github-release). The workflow baseline is
+      # `permissions: {}`, so without this block every gh/git write here 403s.
+      contents: write
     env:
       VERSION: ${{ needs.verify.outputs.canary_version }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
+        with:
+          persist-credentials: false
       - name: Download all platform artifacts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
         with:
@@ -1259,7 +1293,9 @@ jobs:
           # leftover `canary` tag would pin the "new" release to the old commit.
           # Tolerate only genuine absence (first run); fail loud otherwise.
           if git ls-remote --exit-code --tags origin canary >/dev/null 2>&1; then
-            git push origin :refs/tags/canary
+            # gh api, not `git push :refs/tags/canary`: the checkout no longer
+            # persists credentials (artipacked), and GH_TOKEN authenticates gh.
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/tags/canary"
           fi
           {
             echo "Rolling canary build of \`main\`, rebuilt on every code push."
