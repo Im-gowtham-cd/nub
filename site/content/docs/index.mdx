@@ -68,6 +68,16 @@ In CI, swap `actions/setup-node` for the [setup-nub action](/docs/deployment/git
 + - uses: nubjs/setup-nub@v0
 ```
 
+### Canary builds
+
+Every code commit to `main` publishes a canary build for all platforms, versioned `<version>-canary.<date>.<n>`:
+
+```bash
+npm install -g @nubjs/nub@canary
+```
+
+The same binaries are attached to the rolling [canary release](https://github.com/nubjs/nub/releases/tag/canary) on GitHub. Canary tracks the newest commit and passes build and smoke checks only — expect rough edges, and pin back to `@nubjs/nub@latest` to return to the stable channel.
+
 ## Package management
 
 The installer is pnpm-compatible at the CLI surface and lockfile-compatible with whatever your project already uses. It infers the incumbent package manager and mirrors it — npm, pnpm, and bun lockfiles round-trip cleanly; yarn is read-only.
