@@ -15,10 +15,13 @@ description: >-
   different module with no error — which only a fixture run can catch, by
   checking WHICH file answered rather than that something did. The loop: create
   fixtures in a tmp dir, build the dev `nub`, run against them, and diff every
-  result three ways (plain node / the shipped nub release / your build). Ad-hoc
-  e2e is a valid verification method on its own; this skill also covers when to
-  promote a durable check into the committed test suite. Pairs with the
-  `dev-loop` build skill and AGENTS.md's pre-push loop.
+  result three ways — plain node, a build of your branch's MERGE-BASE, and your
+  build. Use the merge-base, NEVER the shipped release: the release can trail
+  `main` by dozens of unrelated commits, so a difference against it is not
+  attributable to your change and every "pre-existing, not mine" verdict resting
+  on it is unfounded. Ad-hoc e2e is a valid verification method on its own; this
+  skill also covers when to promote a durable check into the committed test
+  suite. Pairs with the `dev-loop` build skill and AGENTS.md's pre-push loop.
 metadata:
   internal: true
 ---
