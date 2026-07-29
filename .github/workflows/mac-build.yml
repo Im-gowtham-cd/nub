@@ -58,6 +58,27 @@ jobs:
       # version tags, so pinned SHAs go unreachable; commit verified genuine upstream.
       - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30  # stable
 
+      # On DEPOT runners this transparently writes to Depot Cache (25 GB on the Developer
+      # plan) instead of GitHub's — which matters, because this repo's GitHub Actions cache is
+      # already at 11.03 GB against a 10 GB limit and actively LRU-evicting, so a
+      # GitHub-backed cache here would evict other workflows' entries to no one's benefit.
+      #
+      # Two workspaces because nub-native is its own (the CLI is panic=abort, the cdylib
+      # panic=unwind), and it is a separate `cargo build` below that would otherwise go
+      # uncached. rust-cache strips every crate whose manifest lives under the repo root
+      # before saving, so what this actually caches is the ~598 registry dependencies — the
+      # local crates recompile regardless, since checkout does not preserve mtimes.
+      #
+      # zizmor: ignore[cache-poisoning] this workflow produces a dev artifact for local use
+      # and publishes nothing; only main-ref runs seed the cache, which requires push access.
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+        with:
+          shared-key: mac-build-${{ inputs.profile || 'release' }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+          workspaces: |
+            .
+            crates/nub-native
+
       # The workspace needs Node for two independent reasons, both of which fail QUIETLY:
       # aube-resolver/build.rs ships an EMPTY primer without it (a binary that falls back to
       # network packument fetches, exit code 0), and the root npm install provides
