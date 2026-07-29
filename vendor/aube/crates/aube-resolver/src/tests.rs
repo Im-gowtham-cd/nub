@@ -199,6 +199,7 @@ fn age_gate_help_lists_gated_versions_and_bypass() {
         importer: "packages/app".into(),
         ancestors: vec![("parent".into(), "1.0.0".into())],
         gated: vec!["4.17.21".into(), "4.17.20".into()],
+        publish_times_missing: false,
     }));
     let help = err.help().expect("help set").to_string();
     assert!(help.contains("importer: packages/app"));
@@ -206,6 +207,67 @@ fn age_gate_help_lists_gated_versions_and_bypass() {
     assert!(help.contains("blocked by age gate: 4.17.21, 4.17.20"));
     assert!(help.contains("minimumReleaseAgeStrict=false"));
     assert!(help.contains("minimumReleaseAgeExclude"));
+}
+
+/// A registry that publishes no `time` data blocks the whole range, but for a
+/// reason the ordinary age-gate wording actively misleads on: it would list a
+/// years-old version as "blocked by age gate" and offer a wider window as the
+/// remedy, when no window would ever have helped.
+#[test]
+fn age_gate_names_missing_publish_times_as_the_cause() {
+    let err = Error::AgeGate(Box::new(AgeGateDetails {
+        name: "lodash".into(),
+        range: "^4".into(),
+        minutes: 1440,
+        importer: ".".into(),
+        ancestors: vec![],
+        gated: vec!["4.17.21".into(), "4.17.20".into()],
+        publish_times_missing: true,
+    }));
+    assert!(
+        err.to_string().contains("served no publish times"),
+        "headline must name the real cause, got: {err}"
+    );
+    let help = err.help().expect("help set").to_string();
+    assert!(
+        !help.contains("blocked by age gate"),
+        "must not imply the versions were too new: {help}"
+    );
+    assert!(
+        !help.contains("loosen `minimumReleaseAge`"),
+        "widening the window is not a remedy here: {help}"
+    );
+    assert!(help.contains("minimumReleaseAgeExclude"));
+    assert!(help.contains("minimumReleaseAge=0"));
+}
+
+/// The mixed case stays an ordinary age gate: a populated `time` map with a
+/// hole for one version dates the rest fine, so the missing-times wording
+/// would be wrong.
+#[test]
+fn age_gate_with_a_partially_dated_packument_is_not_the_missing_times_case() {
+    let mut packument = make_packument("lodash", &["4.17.20", "4.17.21"], "4.17.21");
+    packument.time.insert(
+        "4.17.20".to_string(),
+        "2026-07-01T00:00:00.000Z".to_string(),
+    );
+    let task = ResolveTask {
+        name: "lodash".into(),
+        range: "^4".into(),
+        dep_type: DepType::Production,
+        is_root: true,
+        parent: None,
+        importer: ".".into(),
+        original_specifier: None,
+        real_name: None,
+        ancestors: Arc::from([]),
+        range_from_override: false,
+    };
+    let d = build_age_gate(&task, &packument, 1440);
+    assert!(
+        !d.publish_times_missing,
+        "one dated version is enough to make this an ordinary age gate"
+    );
 }
 
 #[test]
@@ -1452,6 +1514,116 @@ async fn highest_mode_with_minimum_release_age_keeps_in_memory_times() {
     let _ = std::fs::remove_dir_all(base);
 }
 
+/// Regression: `minimumReleaseAge` must hold when the resolver runs
+/// WITHOUT the full-packument disk cache — the `aube update` / `add` /
+/// `dedupe` / `audit` configuration (`cache_full_packuments: false`,
+/// their dist-tag freshness rule). Against a registry whose abbreviated
+/// (corgi) document omits the `time` map — npmjs does — the uncached
+/// `needs_time` fallback used to fetch that corgi document, and a
+/// version with no publish time bypasses the age cutoff at the pick
+/// site: `aube update` crossed the gate onto a fresh publish that
+/// `aube install` (full cache on) had just refused, then rewrote
+/// `package.json` onto it. The fix fetches the full document (time
+/// included) when the full cache dir is absent. This test mocks
+/// npmjs's Accept-dependent shape and pins the gated pick.
+#[tokio::test]
+async fn minimum_release_age_holds_without_full_packument_cache() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    // 1.0.0 is years old; 1.1.0 was "published" moments ago.
+    let now_iso = crate::types::format_iso8601_utc(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs(),
+    );
+    let mut full = make_packument("foo", &["1.0.0", "1.1.0"], "1.1.0");
+    full.modified = Some(now_iso.clone());
+    full.time
+        .insert("1.0.0".to_string(), "2024-01-01T00:00:00.000Z".to_string());
+    full.time.insert("1.1.0".to_string(), now_iso);
+    // npmjs's corgi document: same versions, NO time map. It does carry
+    // `modified` — verified against registry.npmjs.org — and for an actively
+    // published package that timestamp is recent, so it cannot stand in as
+    // the maturity proof a time-less document otherwise gets. Keeping it here
+    // is what stops the fixture passing for the wrong reason.
+    let mut corgi = full.clone();
+    corgi.time.clear();
+    let full_body = serde_json::to_vec(&full).unwrap();
+    let corgi_body = serde_json::to_vec(&corgi).unwrap();
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let registry = format!("http://{}/", listener.local_addr().unwrap());
+    let server = tokio::spawn(async move {
+        loop {
+            let Ok((mut socket, _)) = listener.accept().await else {
+                break;
+            };
+            let full_body = full_body.clone();
+            let corgi_body = corgi_body.clone();
+            tokio::spawn(async move {
+                let mut buf = [0_u8; 4096];
+                let n = socket.read(&mut buf).await.unwrap_or(0);
+                // npmjs serves the abbreviated (time-less) document when
+                // the request prefers `application/vnd.npm.install-v1+json`.
+                let request = String::from_utf8_lossy(&buf[..n]);
+                let body = if request.contains("install-v1") {
+                    corgi_body
+                } else {
+                    full_body
+                };
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
+                    body.len()
+                );
+                socket.write_all(response.as_bytes()).await.unwrap();
+                socket.write_all(&body).await.unwrap();
+            });
+        }
+    });
+
+    let base = std::env::temp_dir().join(format!(
+        "aube-resolver-mra-nofullcache-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    let cache_dir = base.join("packuments");
+    std::fs::create_dir_all(&cache_dir).unwrap();
+
+    let client = Arc::new(aube_registry::client::RegistryClient::new(&registry));
+    // Abbreviated cache only — deliberately NO `with_packument_full_cache`,
+    // matching `build_resolver`'s `cache_full_packuments: false` posture.
+    let mut resolver = Resolver::new(client)
+        .with_packument_cache(cache_dir)
+        .with_minimum_release_age(Some(MinimumReleaseAge {
+            minutes: 1440,
+            strict: true,
+            ..Default::default()
+        }));
+    let mut manifest = PackageJson::default();
+    manifest
+        .dependencies
+        .insert("foo".to_string(), "^1.0.0".to_string());
+
+    let graph = resolver.resolve(&manifest, None).await.unwrap();
+
+    assert!(
+        graph_has_package(&graph, "foo", "1.0.0"),
+        "the mature 1.0.0 must be picked; graph: {:?}",
+        graph.packages.keys().collect::<Vec<_>>()
+    );
+    assert!(
+        !graph_has_package(&graph, "foo", "1.1.0"),
+        "the fresh 1.1.0 must stay behind the minimumReleaseAge cutoff \
+         even without the full-packument cache"
+    );
+    server.abort();
+    let _ = std::fs::remove_dir_all(base);
+}
+
 /// Regression: a primer-seeded pick that satisfies the range must still
 /// record the package's publish time when `minimumReleaseAge` is active.
 /// The bundled primer's `time` data is sparse, so a primer hit could
@@ -2401,9 +2573,18 @@ fn pick_version_treats_bookkeeping_only_time_map_as_timeless() {
         "2019-06-01T00:00:00.000Z".to_string(),
     );
     assert_eq!(
-        pick_version(&p, "^1.0.0", None, false, Some(cutoff), None, true, |_, _| false)
-            .unwrap()
-            .version,
+        pick_version(
+            &p,
+            "^1.0.0",
+            None,
+            false,
+            Some(cutoff),
+            None,
+            true,
+            |_, _| false
+        )
+        .unwrap()
+        .version,
         "1.1.0"
     );
 }
