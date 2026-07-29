@@ -142,3 +142,6 @@ wiki
 # yaml) would mark the root as a workspace for nub and re-trigger the
 # engines-redirect the soak surfaces were moved to tools/ to avoid.
 /pnpm-lock.yaml
+
+# Maintainer-local fray worker norms (names private orchestration tooling).
+FRAY.md
