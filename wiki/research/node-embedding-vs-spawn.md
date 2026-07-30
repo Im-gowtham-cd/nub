@@ -68,7 +68,7 @@ Hypothetical: Nub dynamically loads its Rust addon into a Node process.
 - `node -r nub-shim.cjs script.js` — `--require` is in-process, ~1 ms per CJS file. Much cheaper than `--import`.
 - `process.dlopen` of a Rust `.node` addon — ~2–5 ms incremental, plus whatever the addon does in its init. Has to be invoked from JS; can't be triggered from outside.
 
-**"Warm Node, add Nub extensions" path:** Not possible without a daemon. Every `node` invocation rebuilds the isolate from snapshots. The only way to amortize is a long-lived process (see [`daemon.md`](daemon.md)) that holds a warm V8 isolate and accepts work over IPC. That's a real design space but orthogonal to "embed vs spawn."
+**"Warm Node, add Nub extensions" path:** Not possible without a daemon. Every `node` invocation rebuilds the isolate from snapshots. The only way to amortize is a long-lived process (see `daemon.md`) that holds a warm V8 isolate and accepts work over IPC. That's a real design space but orthogonal to "embed vs spawn."
 
 The honest answer for the additive path: **`--require` for CJS shim, plus a snapshot/preamble trick if we ever need ESM hooks** — `--import` is currently too expensive to enable by default.
 
@@ -97,7 +97,7 @@ Tools that wrap *user* Node (nvm, fnm, Volta, mise, ts-node, tsx, npm, pnpm, Yar
 2. **Add an opt-in "use system Node" mode** (`nub --use-system-node` or `nub.config.json` setting) that spawns the user's resolved `node` via PATH + version-manager probe + pin-file resolution. Cache the probe. Honor Volta/asdf/mise shims.
 3. **Do not link `libnode` dynamically.** Revisit only if (a) Node ships a stable C FFI and (b) official tarballs include `libnode`. Both are speculative; neither is on a roadmap.
 4. **Use `--require` (CJS) and a snapshot-baked preamble for shims**, not `--import`, until the loader-hook worker cost is fixed upstream ([nodejs#51661][loader-discussion]).
-5. **Daemon mode** (warm isolate, IPC) is the only real "skip Node startup" path. Track separately in [`daemon.md`](daemon.md).
+5. **Daemon mode** (warm isolate, IPC) is the only real "skip Node startup" path. Track separately in `daemon.md`.
 
 ---
 

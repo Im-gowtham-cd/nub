@@ -14,7 +14,7 @@ math does not justify the architecture cost.
 **Builds on:**
 [`snapshot-env-reads.md`](snapshot-env-reads.md) — `process.env` semantics in snapshotted JS,
 [`cold-start.md`](cold-start.md) — Node cold-start phase breakdown,
-[`runtime-performance.md`](runtime-performance.md) — what runtime perf gains are realistically capturable,
+`runtime-performance.md` — what runtime perf gains are realistically capturable,
 `../runtime/permission-interaction.md` — what we pass through and what we need granted,
 `../runtime/ts-transpilation.md` — the preload pipeline this would snapshot,
 `../runtime/snapshot-incompatibility.md` — the existing "mostly incompatible" decision record.
@@ -304,7 +304,7 @@ Net delta: snapshot saves ~9ms. But this is a degenerate case — the entire poi
 
 The realistic Nub preload sits between "noop" and "heavy" — closer to noop because we don't eagerly walk filesystems or pre-parse JSON in the preload. Savings expected: ~1-3ms.
 
-For context: Nub's headline benchmark target per [`runtime-performance.md`](runtime-performance.md) is the `nub run` script-runner path vs `pnpm run`, where the win is **~150-300ms → ~5-15ms** (10-30× speedup). A ~1-3ms snapshot win on top of that is below user-perceptible threshold and not worth the architecture cost.
+For context: Nub's headline benchmark target per `runtime-performance.md` is the `nub run` script-runner path vs `pnpm run`, where the win is **~150-300ms → ~5-15ms** (10-30× speedup). A ~1-3ms snapshot win on top of that is below user-perceptible threshold and not worth the architecture cost.
 
 For further context: Bun's startup advantage over Node (~22ms) comes from JSC vs V8 macOS dyld characteristics + static linking + skipping `pre_execution.js`. None of those are capturable by a snapshot mechanism on top of the user's installed Node. See [`cold-start.md`](cold-start.md) for the full breakdown.
 

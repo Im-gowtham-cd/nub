@@ -35,6 +35,7 @@ Roadmap and per-command planning material is deliberately not here.
 | [commonjs-handling](commonjs-handling.md) | Why detection beat flipping the default module format |
 | [import-maps-node-resistance](import-maps-node-resistance.md) | Why Node has not shipped import maps |
 | [import-maps-cross-runtime](import-maps-cross-runtime.md) | Import-map support across the non-browser runtimes |
+| [module-resolution](module-resolution.md) | Extensionless ESM in TypeScript, and how close a hook layer can get to Bun |
 
 ## TypeScript and transpilation
 
@@ -46,6 +47,8 @@ Roadmap and per-command planning material is deliberately not here.
 | [node-strip-types-interaction](node-strip-types-interaction.md) | How Node's own type stripping interacts with a load hook |
 | [emit-decorator-metadata](emit-decorator-metadata.md) | What decorator metadata emission requires, and who depends on it |
 | [bun-transpile-cache](bun-transpile-cache.md) | Bun's on-disk transpile cache, and whether the same shape holds |
+| [tsx-architecture](tsx-architecture.md) | How tsx is built, and which parts are worth reusing |
+| [augmentation-layers](augmentation-layers.md) | Bundler against loader hooks as the augmentation layer |
 
 ## Startup and performance
 
@@ -67,6 +70,8 @@ Roadmap and per-command planning material is deliberately not here.
 | [userland-package-clobbering-audit](userland-package-clobbering-audit.md) | Which userland packages are safe to replace with a native equivalent |
 | [legacy-polyfill-clobber-candidates](legacy-polyfill-clobber-candidates.md) | A download-weighted sweep for polyfills Node has since absorbed |
 | [clobber-feature-detect-audit](clobber-feature-detect-audit.md) | Whether each candidate feature-detects, and what breaks if it does not |
+| [clobber-technical-followup](clobber-technical-followup.md) | The open questions left by the clobbering audits |
+| [polyfill-demand-audit](polyfill-demand-audit.md) | Actual download demand for each polyfill under consideration |
 | [store-marker-hardcoding](store-marker-hardcoding.md) | Packages that find the project root by hardcoding a virtual-store directory name |
 | [workspace-discovery-walk-up](workspace-discovery-walk-up.md) | How each package manager finds the workspace root, including the fallback that walks the whole filesystem |
 
@@ -80,6 +85,7 @@ Roadmap and per-command planning material is deliberately not here.
 | [pnpm-filter-grammar](pnpm-filter-grammar.md) | The pnpm filter grammar and its resolution algorithm |
 | [npm-config-user-agent](npm-config-user-agent.md) | What the user-agent string carries, and the scaffolder gap it opens |
 | [nub-field-write-vs-detection](nub-field-write-vs-detection.md) | Whether a version range in the manifest survives five package-manager detectors |
+| [pnpm-specific-behavior](pnpm-specific-behavior.md) | The pnpm-branded config and publish behaviors, and which to mirror |
 
 ## Environment files
 
@@ -102,8 +108,8 @@ Roadmap and per-command planning material is deliberately not here.
 
 | Document | What it establishes |
 | --- | --- |
-| [cross-runtime-compat-benchmark](cross-runtime-compat-benchmark.md) | Deno's Node-compatibility corpus run identically across four runtimes, with its biases quantified |
 | [nub-v0.5-augmentation-regressions](nub-v0.5-augmentation-regressions.md) | Root causes for each augmentation regression against stock Node |
+| [node-test-suite-leverage](node-test-suite-leverage.md) | Using Node's own test suite as a compatibility oracle |
 | [native-http-transport](native-http-transport.md) | Whether a native HTTP transport helps once real Fetch semantics are required |
 
 ## Web platform APIs

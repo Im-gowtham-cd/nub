@@ -1,6 +1,6 @@
 # WinterTC Min-Common-API — why Node hasn't shipped the last 5%
 
-**Date:** 2026-05-22 **Question:** Of the seven WinterTC Minimum Common API globals that Node 26 still doesn't ship (`reportError`, `self`, `PromiseRejectionEvent`, `onerror`, `onunhandledrejection`, `onrejectionhandled`, `globalThis instanceof EventTarget`), how many are missing for good architectural reasons vs. low priority vs. active maintainer resistance? The instinct under test was that these "should be easy" and Node's non-implementation must therefore signal *something* — is that read correct? **Extends:** [`wintertc-compliance-gaps.md`](wintertc-compliance-gaps.md) (the broader Phase-2 survey from 2026-05-18). **Drives the decision in:** `../runtime/min-common-api-globals.md`.
+**Date:** 2026-05-22 **Question:** Of the seven WinterTC Minimum Common API globals that Node 26 still doesn't ship (`reportError`, `self`, `PromiseRejectionEvent`, `onerror`, `onunhandledrejection`, `onrejectionhandled`, `globalThis instanceof EventTarget`), how many are missing for good architectural reasons vs. low priority vs. active maintainer resistance? The instinct under test was that these "should be easy" and Node's non-implementation must therefore signal *something* — is that read correct? **Extends:** `wintertc-compliance-gaps.md` (the broader Phase-2 survey from 2026-05-18). **Drives the decision in:** `../runtime/min-common-api-globals.md`.
 
 ---
 
@@ -148,7 +148,7 @@ The seven gaps are not seven independent decisions. They are **one decision (`gl
 
 **Hold the line on:**
 
-- `globalThis instanceof EventTarget` — ✅ keep the existing "don't ship even behind a flag in Phase 2" call from [`wintertc-compliance-gaps.md`](wintertc-compliance-gaps.md). The deep-dive above confirms: the technical operation is trivial (`Object.setPrototypeOf(globalThis, new EventTarget())`), but the brand-promise hazard is real, and the Node TSC has thought about this longer and more carefully than anyone else and landed on "no" with reasons we should respect.
+- `globalThis instanceof EventTarget` — ✅ keep the existing "don't ship even behind a flag in Phase 2" call from `wintertc-compliance-gaps.md`. The deep-dive above confirms: the technical operation is trivial (`Object.setPrototypeOf(globalThis, new EventTarget())`), but the brand-promise hazard is real, and the Node TSC has thought about this longer and more carefully than anyone else and landed on "no" with reasons we should respect.
 - **Consider exposing the opt-in flag.** ~3 LOC of preload code. Bundles with the handler-property opt-in above. Defer to v0.x.
 
 **Updated v0.1 compliance math:** with the recommended drops, Nub ships ~98% Min-Common-API (vs. ~95% on plain Node, vs. the ~99% the original `min-common-api-globals.md` targeted). The 1% delta is the four EventTarget-dependent items, deferred to a coherent opt-in bundle. **Better to ship 98% with correct semantics than 99% with three subtly-broken globals.**
@@ -176,7 +176,7 @@ The seven gaps are not seven independent decisions. They are **one decision (`gl
 - [WHATWG HTML §event-handler-attributes](https://html.spec.whatwg.org/multipage/webappapis.html#event-handler-attributes) (spec for handler IDL attributes — the contract Nub's proposed shim doesn't satisfy)
 - [WebIDL §dfn-create-operation-function](https://webidl.spec.whatwg.org/#dfn-create-operation-function) (the floating-`this` fallback to `globalThis`)
 - [node-self on npm](https://www.npmjs.com/package/node-self) (the de-facto `self = globalThis` userland polyfill)
-- [`wiki/research/wintertc-compliance-gaps.md`](wintertc-compliance-gaps.md) (the broader survey this doc extends)
+- `wiki/research/wintertc-compliance-gaps.md` (the broader survey this doc extends)
 - `wiki/runtime/min-common-api-globals.md` (the runtime doc this research recommends amending)
 - `wiki/architecture/augmenter-not-fork.md` (the additivity rule the handler shim fails)
 

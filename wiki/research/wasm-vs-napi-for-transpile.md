@@ -154,7 +154,7 @@ Median:
 
 The cold-start delta between oxc-native and oxc-wasm is **+25 ms** — this is the V8 wasm engine compiling the 3.5 MB wasm module on first load. Subsequent calls in the same process don't pay this again (V8 caches the compiled wasm), but every cold `nub script.ts` invocation does.
 
-For Nub's cold-start budget (target: ~30 ms total preload tax per [`runtime-performance.md`](runtime-performance.md)), a 25 ms wasm compile is unacceptable on its own — it would nearly double the augmentation tax.
+For Nub's cold-start budget (target: ~30 ms total preload tax per `runtime-performance.md`), a 25 ms wasm compile is unacceptable on its own — it would nearly double the augmentation tax.
 
 V8 does have a `WebAssembly.Module` compile-cache, but it requires the same module bytes hash on a serialized `--snapshot-from` or similar — not available to general `--import` preloads. Real projects would pay the 25 ms every cold start.
 
@@ -198,7 +198,7 @@ Observations:
 - oxc-wasm carries the full 3.5 MB compiled wasm + 16 MB V8 wasm arena (initial 4000 64KB pages = 250 MB virtual, ~25 MB resident).
 - amaro is heaviest (33 MB) — SWC's wasm module is larger (3.7 MB) and emnapi adds its own runtime overhead.
 
-For long-running daemons ([daemon.md](daemon.md)), all four are fine. For short-lived `nub script.ts` invocations, oxc-native's small footprint is one more cold-start win.
+For long-running daemons (daemon.md), all four are fine. For short-lived `nub script.ts` invocations, oxc-native's small footprint is one more cold-start win.
 
 ## 4. The permission interaction: the load-bearing answer
 
@@ -407,7 +407,7 @@ These could not be resolved from the data above:
 
 - **Does an oxc-transform wasm-bindgen build exist outside the npm registry?** A `wasm32-unknown-unknown` build is possible in principle but the oxc transform crate's dependency on `oxc_span` and the resolver may pull in `std::fs` at compile time. Verifying feasibility would require trying to compile `oxc_transformer` with `wasm32-unknown-unknown` target and seeing what breaks. Not attempted here.
 - **Does V8's wasm compile cache work for `--import` preloads?** V8 caches `WebAssembly.Module` instances within a process; cross-process caching needs `--predictable-gc-schedule` snapshots or similar. Empirical test of cold-start with a warm V8 cache would clarify whether the 25 ms wasm-compile tax is amortizable. Not tested.
-- **Could we use a daemon to amortize the wasm compile cost?** The [daemon.md](daemon.md) design contemplates a long-running Nub daemon for caching; if it pre-loaded the wasm transpiler, the cold-start tax would only hit the daemon's first start. But the daemon path is itself optional, and a non-daemon `nub script.ts` would still pay the tax.
+- **Could we use a daemon to amortize the wasm compile cost?** The daemon.md design contemplates a long-running Nub daemon for caching; if it pre-loaded the wasm transpiler, the cold-start tax would only hit the daemon's first start. But the daemon path is itself optional, and a non-daemon `nub script.ts` would still pay the tax.
 - **Is the oxc-WASI N=10000 OOM upstream-fixable?** The crash trace points at emnapi's allocator; whether it's an emnapi bug, an oxc-transformer allocation pattern, or a V8 wasm-engine limitation is undetermined. Filing an upstream bug would be the next step if WASM becomes load-bearing.
 - **Permission ergonomics for `--allow-wasi`.** If we ever needed to ship a WASI-using addon (FS-touching wasm), the `--allow-wasi` grant is per-process. There's no `--allow-wasi=<path>` scoping like `--allow-fs-read=<path>`. Coarse-grained grant. Worth flagging if WASI-based extensions become part of any future Nub design.
 - **Multi-platform install size on real OS.** We measured darwin-arm64 only (3.6 MB). Linux glibc + musl variants may be larger due to static linking; would be worth measuring on a Linux CI host before publishing a "Nub install size: X MB" claim.
@@ -457,7 +457,7 @@ These could not be resolved from the data above:
 - `../runtime/permission-interaction.md` — current `--permission` interop policy; this doc's recommendation feeds the `--allow-addons` row of its grant-set table.
 - `../runtime/wasm-modules-unflag.md` — our plan to auto-unflag `--experimental-wasm-modules`. The research here confirms the unflag has no permission-model downside.
 - [`node-swc-vs-oxc-choice.md`](node-swc-vs-oxc-choice.md) — sister research doc explaining why oxc, not swc; this doc's performance numbers reinforce that.
-- [`runtime-performance.md`](runtime-performance.md) — Nub's cold-start budget framework, against which the +25 ms wasm-compile tax is unacceptable.
+- `runtime-performance.md` — Nub's cold-start budget framework, against which the +25 ms wasm-compile tax is unacceptable.
 - `../architecture/augmenter-not-fork.md` — mechanism constraint: the transpiler is loaded via Node's extension surfaces (`--import` preload); WASM vs N-API are both in-scope mechanisms, the choice is purely on perf/permission/ ergonomics grounds.
 - `../architecture/compat-mode.md` — the `NODE_COMPAT=1` escape hatch documented as the fallback for permission-locked users.
 

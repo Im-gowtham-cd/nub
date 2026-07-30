@@ -145,7 +145,7 @@ That path is out of scope per Nub's additivity policy and the trade-off analysis
 
 - **Bench the 26 ns claim against our actual N-API floor under Node 24 / 26.** Worth a quick micro-bench before we hard-code design rules around it. napi-rs's published numbers are from ~Node 20 era.
 - **Track V8 Fast API exposure through Node-API.** If [napi-rs#1973](https://github.com/napi-rs/napi-rs/issues/1973) resolves with a stable user-facing entry, the floor drops dramatically and per-token Rust calls re-enter the design space.
-- **Investigate `node-bindgen` and `neon`** as alternative Rust↔Node bindings. napi-rs is the obvious default but worth confirming we're not missing a perf or DX advantage. Initial sub-agent data: napi-rs is the fastest of the three on the trivial number op (37.99M vs 23.98M neon vs 19.62M node-bindgen).
+- **Investigate `node-bindgen` and `neon`** as alternative Rust↔Node bindings. napi-rs is the obvious default but worth confirming we're not missing a perf or DX advantage. Initial data: napi-rs is the fastest of the three on the trivial number op (37.99M vs 23.98M neon vs 19.62M node-bindgen).
 - **Prebuild matrix logistics for Nub's own addons.** napi-rs's CLI is mature, but we need to decide whether each `@nub/*` package owns its own matrix or whether one consolidated build pipeline produces them all.
 
 ## Sources

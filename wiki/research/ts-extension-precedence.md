@@ -5,7 +5,7 @@ files. What extension wins when `./foo` could match `./foo.ts`,
 `./foo.tsx`, `./foo.js`, `./foo/index.ts`, etc.
 **Builds on:** [`module-resolution.md`](module-resolution.md) (parent-
 extension-aware probing), [`tsx-architecture.md`](tsx-architecture.md)
-(candidate-list pattern), [`bun-loaders.md`](bun-loaders.md).
+(candidate-list pattern), `bun-loaders.md`.
 **Sibling:** [`exports-map-ts-swap.md`](exports-map-ts-swap.md)
 (the related `.js → .ts` exports-map controversy).
 **Informs:** the resolve-hook implementation under
@@ -143,7 +143,7 @@ Skips the gate entirely. With `--node` (Nub's vanilla-Node-faithful mode per PLA
 
 - **`node_modules` extension flipping.** We don't probe inside `node_modules` at all, so the question doesn't arise. If we ever do — e.g. for workspace-symlinked TS packages — match Bun/tsx and prefer `.js` over `.ts` for the unbuilt-package case.
 - **`.json` early.** Some configs (Webpack-style) put `.json` earlier. Our list keeps it last on every row. JSON imports are rare enough relative to JS/TS that probing for them ahead of `.tsx`/`.jsx` is paying a stat-cost on every miss for the benefit of a small minority.
-- **`.css`, `.svg`, `.wasm`** in the extensionless list. Per [`bun-loaders.md`](bun-loaders.md), Nub's extension-loader surface is `.ts`/`.tsx`/`.jsx` only. Asset extensions don't get probed.
+- **`.css`, `.svg`, `.wasm`** in the extensionless list. Per `bun-loaders.md`, Nub's extension-loader surface is `.ts`/`.tsx`/`.jsx` only. Asset extensions don't get probed.
 
 ## Cross-link: the `.js → .ts` swap
 

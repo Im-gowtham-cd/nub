@@ -98,7 +98,7 @@ Scan: walk argv; skip booleans/V8/unknown (one token); skip a value flag **plus 
 
 ## 4. The exhaustive value-accepting set
 
-Harvested empirically from each Node's **own** authoritative metadata — `internalBinding('options').getCLIOptionsInfo()` (the same map `lib/internal/options.js` consumes; `type` is the `OptionType` enum), dumped across Node 18.20.4 / 20.19.0 / 22.15.0 / 24.14.0 / 26.2.0. Harness + raw per-version dumps: `.fray/node-flag-arity-table.findings/`.
+Harvested empirically from each Node's **own** authoritative metadata — `internalBinding('options').getCLIOptionsInfo()` (the same map `lib/internal/options.js` consumes; `type` is the `OptionType` enum), dumped across Node 18.20.4 / 20.19.0 / 22.15.0 / 24.14.0 / 26.2.0. Harness and raw per-version dumps are retained privately.
 
 ### Canonical value-accepting options — Node v26.2.0 (72)
 

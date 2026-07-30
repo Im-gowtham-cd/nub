@@ -165,7 +165,7 @@ The in-process script execution is a `nub run` concern — see `commands/run.md`
 ## Open questions
 
 - **Lifecycle script edge cases.** Worth a separate audit of what exact env vars npm/pnpm/yarn set and which user code actually reads them. `npm_package_config_*` and `npm_lifecycle_event` are the most-cited; the long tail may be small enough to handle once.
-- **`postinstall` / install-time scripts.** Out of scope for this doc (this is about `nub run`, not `nub install`), but the same in-process logic could apply there. Tracked separately under `commands/pm/install.md` (deferred to v1.x; see [`package-manager-strategy.md`](package-manager-strategy.md)).
+- **`postinstall` / install-time scripts.** Out of scope for this doc (this is about `nub run`, not `nub install`), but the same in-process logic could apply there. Tracked separately under `commands/pm/install.md` (deferred to v1.x; see `package-manager-strategy.md`).
 - **Workspace scripts** (`pnpm -r run build`). Bigger surface; the in-process trick still applies per-package, but orchestration (parallelism, topological order, output streaming) is a meaningful piece of work. Not a v1 target.
 - **Should `nub run X` work outside a `package.json`?** Bun supports `bun run ./file.js` as a near-alias for `bun ./file.js`. Worth matching for ergonomics; trivial to implement on top of the in-process path.
 

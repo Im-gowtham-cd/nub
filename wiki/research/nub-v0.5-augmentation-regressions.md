@@ -30,7 +30,7 @@ Severity key: **High** = silent wrong result or every-invocation cost · **Med**
 - **What breaks:** `runtime/polyfills.cjs:145` reads `typeof globalThis.MessageEvent` to install a spec ports-freeze. `MessageEvent` is a lazy undici-backed global, so the *read* synchronously loads undici + its http/http2/tls/crypto/zlib/worker closure — **227 modules at startup vs Node's 110**. Consequences: startup cost on every invocation; workers accumulate it (60 workers → 5.5× RSS, over the test's 5× cap — a real memory regression); heap/cpu profilers capture it (profile pollution); and it makes several tests slow enough to blow the 25s corpus budget (the "hangs" — none are real deadlocks; all exit 0 under a 300s budget, I verified).
 - **Landed:** 2026-06-25 (#163), between the two benchmarks. So it's part of the 53→70 growth.
 - **Severity:** High — it's the single biggest lever; fixing it closes/reduces 4 clusters and cuts startup on every run.
-- **Recommendation:** a previously-written and then discarded fix — probe with `"MessageEvent" in globalThis` (the `in` op never fires the lazy getter) and version-gate the freeze off on the fast tier (Node froze `.ports` natively at 22.3.0; our floor is 22.15). Verified: 227→114 modules, ports still frozen, workers fine. **Re-apply.** Three independent sub-agents root-caused this same line.
+- **Recommendation:** a previously-written and then discarded fix — probe with `"MessageEvent" in globalThis` (the `in` op never fires the lazy getter) and version-gate the freeze off on the fast tier (Node froze `.ports` natively at 22.3.0; our floor is 22.15). Verified: 227→114 modules, ports still frozen, workers fine. **Re-apply.** Three independent investigations root-caused this same line.
 
 ### Cause 2 — `--enable-source-maps` always injected
 - **Tests:** ~5 (assert ×2, source-map-enable, es-module-cjs-named-error; also the 26.x TypeError).
@@ -50,7 +50,7 @@ Severity key: **High** = silent wrong result or every-invocation cost · **Med**
 - **What breaks:** nub wraps `Module._load` (to lazily detect `child_process`) and `_resolveFilename`. Both are declared anonymously in Node, so nub's `.call()` wrapper leaves a null-named frame and an extra `at module_._load (…/.cache/nub/…/preload-common.cjs:1064)` line **in every user error stack**, and breaks the REPL's error-frame slicing (`Uncaught [Error:` instead of `Uncaught Error:`).
 - **Landed:** `_resolveFilename` 2026-06-10; `_load` 2026-06-14 (the `-S` hit is a revert of a *different* `_load` deferral). Around the June benchmark — **old/pre-existing**.
 - **Severity:** Med — cosmetic but user-visible in every trace.
-- **Recommendation:** fold the `child_process` detection into the existing `registerHooks` resolve hook (a resolve hook isn't on the stack during user code) rather than wrapping `_load`; restore `.name` on the displaced `_resolveFilename`. Two sub-agents converged; agent D's resolve-hook approach supersedes a bare rename.
+- **Recommendation:** fold the `child_process` detection into the existing `registerHooks` resolve hook (a resolve hook isn't on the stack during user code) rather than wrapping `_load`; restore `.name` on the displaced `_resolveFilename`. Two independent investigations converged; the resolve-hook approach supersedes a bare rename.
 
 ### Cause 5 — Injected flags copied into child argv (`process.execArgv`)
 - **Tests:** ~3 (vm-main-context ×2, vm-dynamic-import-missing-flag).

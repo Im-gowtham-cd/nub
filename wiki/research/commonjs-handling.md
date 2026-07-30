@@ -1,6 +1,6 @@
 # Research: CommonJS handling — what stance Nub should take
 
-**Status:** 2026-05-18. **Informs:** `runtime/module-format.md`, `PLAN.md`. **Related:** [`research/community-requested-features.md`](community-requested-features.md), [`research/bun-loaders.md`](bun-loaders.md), [`research/tsx-architecture.md`](tsx-architecture.md).
+**Status:** 2026-05-18. **Informs:** `runtime/module-format.md`, `PLAN.md`. **Related:** `research/community-requested-features.md`, `research/bun-loaders.md`, [`research/tsx-architecture.md`](tsx-architecture.md).
 
 ## Contents
 
@@ -221,7 +221,7 @@ Neither requires modifying Node and neither is a behavioral change from a user's
 - [Deno docs — Node and npm compatibility](https://docs.deno.com/runtime/fundamentals/node/)
 - Internal: `runtime/module-format.md`
 - Internal: [`research/tsx-architecture.md`](tsx-architecture.md)
-- Internal: [`research/bun-loaders.md`](bun-loaders.md)
+- Internal: `research/bun-loaders.md`
 
 [issue-49432]: https://github.com/nodejs/node/issues/49432 [issue-49494]: https://github.com/nodejs/node/issues/49494 [issue-50043]: https://github.com/nodejs/node/issues/50043 [pr-56092]: https://github.com/nodejs/node/pull/56092 [issue-53016]: https://github.com/nodejs/node/issues/53016 [pr-51977]: https://github.com/nodejs/node/pull/51977 [issue-52697]: https://github.com/nodejs/node/issues/52697 [joyee-blog]: https://joyeecheung.github.io/blog/2025/12/30/require-esm-in-node-js-from-experiment-to-stability/ [npm-esm-cjs]: https://github.com/wooorm/npm-esm-vs-cjs [bun-cjs-blog]: https://bun.sh/blog/commonjs-is-not-going-away
 

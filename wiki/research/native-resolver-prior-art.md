@@ -1,6 +1,6 @@
 # Prior art: native module resolver in Node.js core
 
-Research compiled 2026-05-17 for `runtime/native-resolver.md`. Scope: what Node TSC members, Modules WG, and core contributors have already said, done, attempted, or rejected with respect to porting the JS module resolver to native code. Sibling refs: [`module-resolution.md`](module-resolution.md), [`forking-node-build-system.md`](forking-node-build-system.md), [`rust-resolution-feasibility.md`](rust-resolution-feasibility.md).
+Research compiled 2026-05-17 for `runtime/native-resolver.md`. Scope: what Node TSC members, Modules WG, and core contributors have already said, done, attempted, or rejected with respect to porting the JS module resolver to native code. Sibling refs: [`module-resolution.md`](module-resolution.md), `forking-node-build-system.md`, [`rust-resolution-feasibility.md`](rust-resolution-feasibility.md).
 
 ## TL;DR
 

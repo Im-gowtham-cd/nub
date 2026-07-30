@@ -63,13 +63,13 @@ External approximation: use stock Node's permission model. Sufficient for the co
 
 Upstream demand: [nodejs/node#49442](https://github.com/nodejs/node/issues/49442) ("Invalidate import cache", 90 reactions), [nodejs/node#61767](https://github.com/nodejs/node/pull/61767) ("`Module.clearCache()` for CJS+ESM", 32 reactions). Current server-HMR options (`hot-hook`, Vite SSR + Module Runner, Bun `--hot`) reimplement a module graph the runtime already maintains internally. A fork could expose a primitive: "replace module X's exports with these new bindings, invalidate transitively, preserve identified live state across the swap."
 
-External approximation: the rewrite-specifier trick (every userland implementation uses it) works and is the basis for Nub's planned HMR primitive — see [`hmr-primitive.md`](hmr-primitive.md). The *genuine* ceiling it leaves is monotonic memory accumulation (old module records can't be evicted from V8's ESM map), which matters for long dev sessions but does not block shipping the feature.
+External approximation: the rewrite-specifier trick (every userland implementation uses it) works and is the basis for Nub's planned HMR primitive — see `hmr-primitive.md`. The *genuine* ceiling it leaves is monotonic memory accumulation (old module records can't be evicted from V8's ESM map), which matters for long dev sessions but does not block shipping the feature.
 
 ### Snapshot / cache primitives exposed to users
 
 Upstream demand: [nodejs/node#35711](https://github.com/nodejs/node/issues/35711) (snapshot integration tracking), [nodejs/node#38905](https://github.com/nodejs/node/pull/38905) (userland `--build-snapshot`, partially landed). V8 startup snapshots are a Node-internal mechanism today. A fork could expose them as a user-facing primitive: "snapshot this module graph as initialized; subsequent runs skip parse and init."
 
-External approximation: Node's `--build-snapshot` exists but is experimental and narrow. Nub can use it today for per-project startup snapshots; broader built-in-module coverage is a custom-Node-build (no source patches) win — see [`community-requested-features.md`](community-requested-features.md#bootstrap-snapshots-issue-35711-pr-38905).
+External approximation: Node's `--build-snapshot` exists but is experimental and narrow. Nub can use it today for per-project startup snapshots; broader built-in-module coverage is a custom-Node-build (no source patches) win — see `community-requested-features.md`.
 
 ### Single-binary distribution with embedded asset linking
 
@@ -87,7 +87,7 @@ External approximation: Nub's spawn pipeline can inject default flags into every
 
 Upstream demand: [nodejs/node#57992](https://github.com/nodejs/node/issues/57992) ("Integrate OpenTelemetry", 106 reactions), [nodejs/node#61907](https://github.com/nodejs/node/pull/61907) (OTEL module implementation), [nodejs/node#49296](https://github.com/nodejs/node/issues/49296) ("Structured log in core", 24 reactions). A fork could ship richer built-in observability: structured diagnostic channels, per-route HTTP timings, automatic event-loop-lag reporting, GC and JIT spans on by default — events `diagnostic_channel` does not currently expose.
 
-External approximation: stock Node's `diagnostic_channel` + AsyncLocalStorage cover the HTTP / DB / DNS / undici subsystems well; Nub bundling auto-instrumentations on top gives the zero-config user experience (see [`community-requested-features.md`](community-requested-features.md#opentelemetry--out-of-the-box-experience-issue-57992-pr-61907)). The remaining fork-only piece is visibility into V8-internal events (GC, JIT, scheduler hops) and eliminating the residual monkey-patching some auto-instrumentations still do at module-load time.
+External approximation: stock Node's `diagnostic_channel` + AsyncLocalStorage cover the HTTP / DB / DNS / undici subsystems well; Nub bundling auto-instrumentations on top gives the zero-config user experience (see `community-requested-features.md`). The remaining fork-only piece is visibility into V8-internal events (GC, JIT, scheduler hops) and eliminating the residual monkey-patching some auto-instrumentations still do at module-load time.
 
 ### Stack traces, error formatting, REPL polish
 
@@ -107,7 +107,7 @@ External approximation: pass flags via the spawn pipeline. Works for most.
 
 ### Workers / threading primitives
 
-Node's worker pool ergonomics are weak (every worker is its own file; no inline-function workers; `postMessage` copies by default — see [`threading.md`](threading.md)). Most of the proposed improvements are additive npm packages and need no fork. The runtime-level pieces (worker cold start, ESM loader-hook regression inside workers, compiled-code retention across worker spawns) genuinely require fork-side work or upstream patches.
+Node's worker pool ergonomics are weak (every worker is its own file; no inline-function workers; `postMessage` copies by default — see `threading.md`). Most of the proposed improvements are additive npm packages and need no fork. The runtime-level pieces (worker cold start, ESM loader-hook regression inside workers, compiled-code retention across worker spawns) genuinely require fork-side work or upstream patches.
 
 ### Process model
 
@@ -134,7 +134,7 @@ Node releases roughly monthly (with quarterly LTS cuts). V8 alone gets a major v
 - Backporting security patches on Node's schedule.
 - Running Node's full test suite, which takes hours.
 
-This is a team commitment, not a project. Bun has spent years on this and still ships re-implementation drift (see [`vite-bun-integration.md`](vite-bun-integration.md)) — and Bun has the larger team and longer head start.
+This is a team commitment, not a project. Bun has spent years on this and still ships re-implementation drift (see `vite-bun-integration.md`) — and Bun has the larger team and longer head start.
 
 ### Trust contract erosion
 

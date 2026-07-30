@@ -1,6 +1,6 @@
 # Research: Node version floor for Nub's extensibility mechanisms
 
-**Status:** v1, 2026-05-18. Commissioned to scrutinize the "support any active LTS" stance in `runtime/target-version.md` and `runtime/auto-flag-injection.md` in light of the actual Node-version availability of the mechanisms Nub depends on as a CLI-on-top-of-Node augmenter (`architecture/augmenter-not-fork.md`). **Informs:** `runtime/target-version.md`, `runtime/auto-flag-injection.md`, `runtime/ts-transpilation.md`. **Adjacent:** [`node-extensibility-headroom.md`](node-extensibility-headroom.md), [`augmentation-layers.md`](augmentation-layers.md).
+**Status:** v1, 2026-05-18. Commissioned to scrutinize the "support any active LTS" stance in `runtime/target-version.md` and `runtime/auto-flag-injection.md` in light of the actual Node-version availability of the mechanisms Nub depends on as a CLI-on-top-of-Node augmenter (`architecture/augmenter-not-fork.md`). **Informs:** `runtime/target-version.md`, `runtime/auto-flag-injection.md`, `runtime/ts-transpilation.md`. **Adjacent:** `node-extensibility-headroom.md`, [`augmentation-layers.md`](augmentation-layers.md).
 
 ## Question
 
@@ -72,7 +72,7 @@ From [nodejs/discussions#51661](https://github.com/orgs/nodejs/discussions/51661
 
 - **Compare to sync `registerHooks()`:** in-thread, in-realm, single digit ms one-time install, ~µs per resolve. The PR description for [#55698](https://github.com/nodejs/node/pull/55698) makes the pitch explicit: *"easier for CJS monkey-patchers to migrate to"* — i.e. specifically targets the workload Nub cares about.
 
-**Net:** any Node version that lacks sync `registerHooks()` forces Nub into the async path, which costs +400ms per script invocation. That number is larger than Nub's entire startup budget (~80–130ms target per [`node-extensibility-headroom.md`](node-extensibility-headroom.md)).
+**Net:** any Node version that lacks sync `registerHooks()` forces Nub into the async path, which costs +400ms per script invocation. That number is larger than Nub's entire startup budget (~80–130ms target per `node-extensibility-headroom.md`).
 
 ### Does async-register cover the same surface as sync?
 

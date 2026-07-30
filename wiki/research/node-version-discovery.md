@@ -4,7 +4,7 @@
 >
 > TL;DR: ship a layered discovery — pin-file parse → PATH probe → known-layout scan — with a small mtime-keyed cache. The mechanism is **a CLI behavior, not a runtime augmentation**, so it runs identically in compat mode. Recommended for **v0 Phase 1**: it is the credible delivery vehicle for the "Nub makes the awkward parts of using Node go away" pitch, and Volta proves the UX bar.
 
-Architecture anchor: `../architecture/augmenter-not-fork.md`. Sibling reads: [`node-embedding-vs-spawn.md`](node-embedding-vs-spawn.md) (covers the discovery surface at high level), [`competitive-mise.md`](competitive-mise.md) (mise is both prior art and partly a competitor), [`cold-start.md`](cold-start.md) (why every probe costs us against the budget).
+Architecture anchor: `../architecture/augmenter-not-fork.md`. Sibling reads: [`node-embedding-vs-spawn.md`](node-embedding-vs-spawn.md) (covers the discovery surface at high level), `competitive-mise.md` (mise is both prior art and partly a competitor), [`cold-start.md`](cold-start.md) (why every probe costs us against the budget).
 
 ## 1. Why Nub has to solve this
 

@@ -33,8 +33,8 @@ A handful of suggested new plan docs are called out at the end.
 - [`env-file-loading.md`](env-file-loading.md),
   [`env-expansion-and-test-skip.md`](env-expansion-and-test-skip.md)
   — env-loading research.
-- [`watch-mode-scope-thesis.md`](watch-mode-scope-thesis.md),
-  [`watch-mode.md`](watch-mode.md) — watch-mode plumbing.
+- `watch-mode-scope-thesis.md`,
+  `watch-mode.md` — watch-mode plumbing.
 ---
 
 # Node CLI flag interactions with Nub's augmentation surfaces
@@ -705,7 +705,7 @@ Plus updates to existing docs as called out in [§6 action items](#6-action-item
 - [`nodejs.org/api/module.html#moduleregisterhooksoptions`](https://nodejs.org/api/module.html) — `registerHooks()` API contract, including `context.conditions` propagation.
 - [`nodejs.org/api/cli.html#--watch`](https://nodejs.org/api/cli.html) — watch mode docs.
 - Node source spot-checks: `lib/internal/main/watch_mode.js`, `lib/internal/process/pre_execution.js`, `src/permission/*`, `lib/internal/modules/esm/resolve.js#finalizeResolution`.
-- Sibling research: [`experimental-flags-unflagging.md`](experimental-flags-unflagging.md), [`env-expansion-and-test-skip.md`](env-expansion-and-test-skip.md), [`env-file-loading.md`](env-file-loading.md), [`watch-mode-scope-thesis.md`](watch-mode-scope-thesis.md), [`watch-mode.md`](watch-mode.md).
+- Sibling research: [`experimental-flags-unflagging.md`](experimental-flags-unflagging.md), [`env-expansion-and-test-skip.md`](env-expansion-and-test-skip.md), [`env-file-loading.md`](env-file-loading.md), `watch-mode-scope-thesis.md`, `watch-mode.md`.
 - Nub plan docs: as cited in section 1.
 
 ## Changelog
