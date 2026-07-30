@@ -675,7 +675,7 @@ Each should be a CI test. The matrix is small enough to maintain and large enoug
 
 ## 7. Open questions
 
-1. **Permission model auto-grant vs reject (§4.1).** Recommendation is "reject with helpful message" for v0.1, but auto-grant could be implemented later. Needs explicit decision from Colin.
+1. **Permission model auto-grant vs reject (§4.1).** Recommendation is "reject with helpful message" for v0.1, but auto-grant could be implemented later. Left as an open product decision.
 2. **`--watch` reports for non-import files.** Working hypothesis is that our preload emits `watch:require` for tsconfig and other indirect-dep files. **Needs prototyping** to confirm Node's `WATCH_REPORT_DEPENDENCIES` IPC accepts these reports from an arbitrary preload (vs only from the loader internals).
 3. **Worker-thread preload inheritance (§5 S10).** Default `execArgv` inheritance should propagate our `--import`, but needs verification across Node 22.15 / 24 / 25. Especially important if `--test-isolation=worker` becomes a common pattern.
 4. **`--frozen-intrinsics` compatibility floor.** Could we audit + adapt our preload to work under frozen intrinsics? Probably yes for our own code; not for arbitrary user deps. Decision: don't try; document incompat.

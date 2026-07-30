@@ -1,6 +1,6 @@
 # Clobber feature-detect audit
 
-**Date:** 2026-05-25. Scope: re-evaluate every userland package currently in (or proposed for) Nub's v0.1 default clobber set against a tightened bar: a clobber is justified only when the userland package does *not* already feature-detect and route to native on Nub's Node 22.15+ floor, OR when there is a specific, articulable parity benefit beyond install-size. Companion to [`userland-package-clobbering-audit.md`](userland-package-clobbering-audit.md), [`polyfill-demand-audit.md`](polyfill-demand-audit.md), [`clobber-technical-followup.md`](clobber-technical-followup.md), [`clobber-perf-comparison.md`](clobber-perf-comparison.md), [`legacy-polyfill-clobber-candidates.md`](legacy-polyfill-clobber-candidates.md). Triggered by Colin's pushback on 2026-05-25: "would be quite weird if [the userland package] clobbered the native implementation if it existed" — i.e., a clobber that only saves parse-cost on a polyfill that already routes to native is not buying what the legacy-polyfill doc claimed it was buying.
+**Date:** 2026-05-25. Scope: re-evaluate every userland package currently in (or proposed for) Nub's v0.1 default clobber set against a tightened bar: a clobber is justified only when the userland package does *not* already feature-detect and route to native on Nub's Node 22.15+ floor, OR when there is a specific, articulable parity benefit beyond install-size. Companion to [`userland-package-clobbering-audit.md`](userland-package-clobbering-audit.md), [`polyfill-demand-audit.md`](polyfill-demand-audit.md), [`clobber-technical-followup.md`](clobber-technical-followup.md), [`clobber-perf-comparison.md`](clobber-perf-comparison.md), [`legacy-polyfill-clobber-candidates.md`](legacy-polyfill-clobber-candidates.md). Triggered by pushback on 2026-05-25: "would be quite weird if [the userland package] clobbered the native implementation if it existed" — i.e., a clobber that only saves parse-cost on a polyfill that already routes to native is not buying what the legacy-polyfill doc claimed it was buying.
 
 ## TL;DR
 
@@ -222,7 +222,7 @@ Demoted from the [`legacy-polyfill-clobber-candidates.md`](legacy-polyfill-clobb
 - `atob` — doesn't feature-detect; clears (a) but the 5-line wrapper is below the load-bearing threshold.
 - `abab` — doesn't feature-detect; clears (a) but `lib/atob`'s null-on-invalid-input vs native's `DOMException` throw is a parity bug. Also deprecated upstream.
 
-`wiki/runtime/package-clobbering.md` action items (do NOT apply in this audit — owned by Colin or the next plan-doc edit):
+Follow-on action items for the package-clobbering plan (deliberately not applied in this audit):
 
 - Strengthen the rationale field on each of the three existing entries to lead with (a) — real code elimination — instead of leading with install-size or Bun-parity. The existing wording for `abort-controller` is the most outdated and benefits most from the rewrite.
 - Add an explicit "the reframed clobber bar" subsection that states the (a)/(b) test verbatim so future audit cycles use the same rule.

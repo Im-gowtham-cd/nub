@@ -236,11 +236,11 @@ This is a nubx-resolver architecture call — final shape is the `nubx-flag-env-
 
 ```sh
 # Per-version authoritative dump (option name → OptionType, + aliases):
-node --expose-internals .fray/node-flag-arity-table.findings/dump-harness.js
+node --expose-internals dump-harness.js
 # Run across majors via PATH/nvm; diff the value-accepting sets.
 ```
 
-Ground-truth source: `node/src/node_options.{h,cc}`, `node_options-inl.h` (the `Parse` value-consuming branch). Raw per-version dumps + harness: `.fray/node-flag-arity-table.findings/`.
+Ground-truth source: `node/src/node_options.{h,cc}`, `node_options-inl.h` (the `Parse` value-consuming branch). Raw per-version dumps and harness retained privately: `node-flag-arity-table.findings/`.
 
 ## Changelog
 

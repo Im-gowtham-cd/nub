@@ -246,7 +246,7 @@ If Nub didn't support `emitDecoratorMetadata`, Nub would be the only mainstream 
 
 Rationale, in order of weight:
 
-1. **Already committed.** `non-erasable-syntax.md` lists `emitDecoratorMetadata` under "What we ship" with Colin's 2026-05-18 decision recorded. This doc validates that commitment against current upstream status; it does not propose new scope.
+1. **Already committed.** `non-erasable-syntax.md` lists `emitDecoratorMetadata` under "What we ship", decided 2026-05-18. This doc validates that commitment against current upstream status; it does not propose new scope.
 2. **Upstream is ready.** oxc-transformer has shipped the emission path (PR [`#8614`](https://github.com/oxc-project/oxc/pull/8614), Feb 2025) and refined it through April-May 2025. The metadata transform is exercised in production by Vite/Rolldown-adopting TS projects. The remaining gaps are edge cases (computed keys, `accessor` + legacy), not the emission pathway.
 3. **Compatibility is paramount.** Nub's stated contract is that code targeting Node must run on Nub byte-for-byte. Every existing NestJS app is "code targeting Node." Skipping metadata violates this commitment in the most-visible-possible way.
 4. **The brand-boundary cost is zero.** No `NUB_*` env var, no `globalThis.nub`, no `@nub/*` package, no source patch. We respect the user's tsconfig flags and we don't auto-inject `reflect-metadata`. The user owns the polyfill the same way they do on `tsc`, on Bun, and on ts-node.
