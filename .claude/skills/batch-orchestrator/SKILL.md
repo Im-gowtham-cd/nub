@@ -67,6 +67,29 @@ Gate on what the batch actually touches:
   Confirm from the log that the crate compiled *for that target* — otherwise the cfg'd code was
   skipped and you proved nothing.
 
+**"ONE build" is really TWO artifact universes — plan for it (verified against `.github/workflows/ci.yml`).**
+CI's check and clippy jobs run `--profile fast` (ci.yml:182, :220); `cargo test` runs on the DEFAULT
+`dev` profile (ci.yml:286, :790). Those are different target subdirectories, so **clippy artifacts do
+not serve `cargo test` and vice versa** — gating a batch on both means two dependency builds, not one.
+Budget for that rather than discovering it mid-run, and never "helpfully" put `cargo test` on
+`--profile fast` to unify them: that diverges from what CI actually runs, which is the one thing this
+loop exists to reproduce. The reverse mistake is worse — dropping `--profile fast` from clippy drives
+a second full dependency build under `dev` and leaves ~26 GB of duplicated `target/debug` +
+`target/fast` on the volume. `fast` inherits `dev` (identical debug-assertions, overflow checks and
+opt-level; only debuginfo differs, which no lint reads), so the split costs nothing in fidelity.
+
+**Do not `export CARGO_TARGET_DIR` — for yourself or in any dispatch prompt.** `scripts/rust-build.sh`
+picks the target dir AND CoW-seeds a fresh private one from a warm shared bucket (~14s); an explicit
+variable silently opts out and buys a ~40-minute cold build. Check the BRANCH first, though: the
+wrapper's seeding landed in #589, so a long-lived branch cut before it has the wrapper with NO seeding,
+and telling a lane "use the wrapper for a warm start" there is simply wrong. `grep -c seed
+scripts/rust-build.sh` settles it in one command.
+
+**Never pipe a build or gate through `tail`/`head`.** Two separate failures: you get the PIPE's exit
+status rather than cargo's — which hid three real failures in one session here — and `| head -N` closes
+the pipe after N lines, SIGPIPE-killing tee and cargo outright. A lane lost a build to exactly that,
+then found its target dir "cold" ten minutes later and `rm -rf`'d it. Redirect to a file and grep it.
+
 **Triage failures against the phase-1 file map.** A shared build means a compile error is not
 attributable by default. If an error spans two agents' files, that is a real interface disagreement:
 warm-resume BOTH with the error rather than guessing which is wrong.
