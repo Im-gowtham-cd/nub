@@ -1,6 +1,6 @@
 ---
 name: gcloud-vm
-description: Provision, start, reach, and use Google Cloud VMs for nub — for any real-OS work the local macOS host and Docker can't do (real Linux-kernel enforcement, real Windows/AppContainer/MSVC, a clean multi-GB build box). Invoke whenever you think "I need a Linux box" or "I need a Windows box" — you can START the existing `nub-linux`/`nub-win` instances OR CREATE a fresh one on demand with `gcloud compute instances create`. Encodes the load-bearing gotchas: IPs change on every restart (never trust a hardcoded one), SSH user is `nub` with key `~/.ssh/nub-vm`, a RUNNING box can be a wedged box (read the serial console), size any nub-building Linux box at ≥16 GB, and prefer cross-compiling on the Mac + scp'ing the artifact over building on the VM. Auth expiry needs an interactive `! gcloud auth login` you cannot run yourself.
+description: Provision, start, reach, and use Google Cloud VMs for nub — for any real-OS work the local macOS host and Docker can't do (real Linux-kernel enforcement, real Windows/AppContainer/MSVC, a clean multi-GB build box). Invoke whenever you think "I need a Linux box" or "I need a Windows box" — you can START the existing `nub-linux`/`nub-win` instances OR CREATE a fresh one on demand with `gcloud compute instances create`. Encodes the load-bearing gotchas: IPs change on every restart (never trust a hardcoded one), SSH user is `nub` with key `~/.ssh/nub-vm`, a RUNNING box can be a wedged box (read the serial console), size any nub-building Linux box at ≥16 GB, and prefer cross-compiling on the Mac + scp'ing the artifact over building on the VM. AUTH IS NOT A BLOCKER — `gcloud` USER auth expires constantly (org session-control revokes the refresh token), but a durable SERVICE-ACCOUNT KEY makes every VM op work non-interactively: prefix any command with `CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE=~/.config/pullfrog/vertex-service-account.json`. Never conclude "the VMs are unavailable" from a `Reauthentication failed. cannot prompt during non-interactive execution` error until you have tried that override.
 ---
 
 # Google Cloud VMs for nub
@@ -39,6 +39,14 @@ gcloud compute instances stop  nub-linux --zone us-central1-a   # when you finis
   ssh -i ~/.ssh/nub-vm -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
       -o ConnectTimeout=15 nub@"$IP" "echo ok"
   ```
+- **A VM can be stopped out from under you MID-SESSION, and it comes back on a DIFFERENT IP
+  (measured 2026-07-30).** This is stronger than "the IP changes on every start", and it breaks the
+  natural reading of that rule — an agent that correctly resolved the IP once, at the top of its run,
+  can still be holding a dead address an hour later, because something else stopped and restarted the
+  box in between. A long-running lane hit exactly this: `nub-linux` disappeared under it and returned
+  as `136.65.151.34`. So **re-resolve the IP on every reconnect, not once per session**, and treat a
+  sudden `Connection refused`/timeout on a previously-working box as "it moved", not "it wedged" —
+  re-read the IP before you go reading the serial console.
 - **Always reachability-guard a VM dispatch** (`ConnectTimeout`, `timeout`), and after a fresh start
   retry with backoff for a few minutes — sshd (Windows especially) isn't up the instant STATUS flips
   RUNNING. Never let a sub-agent hang on a VM: check reachability, act, report, exit.
