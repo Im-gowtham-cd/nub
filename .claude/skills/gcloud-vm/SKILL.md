@@ -90,6 +90,17 @@ gcloud compute instances add-metadata nub-linux-tmp --zone us-central1-a \
   output beats guessing "network problem" every time.
 - **Size ≥16 GB for anything that compiles the nub Rust workspace.** An e2-small (2 GB) cannot build
   it and will OOM-wedge. e2-standard-4 (16 GB) is the proven size.
+- **Write every script you send to `nub-win` as ASCII + CRLF (cost two cycles, 2026-07-30).**
+  PowerShell 5.1 reads a BOM-less script in the ANSI codepage, so a UTF-8 character anywhere in the
+  file — an em-dash in a *comment* is the usual culprit — fails with `The string is missing the
+  terminator`, and the error points at the **last line of the file**, not the offending one. The
+  diagnostic is useless and sends you hunting a quoting bug that does not exist. Keep remote
+  PowerShell ASCII-only, or emit a UTF-8 BOM.
+- **`IsOutputRedirected` is always True over SSH, so the first-run TTY path is UNREACHABLE there.**
+  A `PowerShell` session reached by SSH reports both stdout and stderr redirected, so any
+  `is_terminal()` branch silently takes the non-TTY path and cannot be exercised. Testing real
+  console behavior on Windows needs a ConPTY harness or an interactive RDP session. (On Linux the
+  equivalent is easy — wrap the run in `script(1)` and the TTY branch runs.)
 - **For a nub RUST BUILD, use the `remote-build` skill, not this one.** `scripts/remote-build.ts`
   provisions an ephemeral spot builder from a pre-baked image, cross-compiles
   `aarch64-apple-darwin` on Linux (cargo-zigbuild, no Apple SDK) and pulls the signed binary
