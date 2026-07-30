@@ -48,7 +48,7 @@ consumers (not from memory).
 ## Evidence (file:line)
 
 ### corepack 0.35.0 — hard-errors on nub, range or exact
-Source: `.repos/node/deps/corepack/dist/lib/corepack.cjs` (bundled).
+Source: `node/deps/corepack/dist/lib/corepack.cjs` (bundled).
 - Known set `{"npm","pnpm","yarn"}` (L13412-13414); `isSupportedPackageManager("nub") → false`
   (L13419-13421).
 - `parseSpec` runs the **version-format check FIRST** (L13444, `enforceExactVersion &&
@@ -65,7 +65,7 @@ Source: `.repos/node/deps/corepack/dist/lib/corepack.cjs` (bundled).
   `devEngines` — a nub pin placed *only* in `devEngines` avoids this hard-error.
 
 ### package-manager-detector — name-generic, range-safe (needs #72 merged)
-Source: `.repos/package-manager-detector/src/detect.ts` (checkout at #66, pre-#72).
+Source: `package-manager-detector/src/detect.ts` (checkout at #66, pre-#72).
 - `packageManager` parse (L123-127): `const [name, ver] = pkg.packageManager.replace(/^\^/,'').split('@')`;
   `handelVer` = `version?.match(/\d+(\.\d+){0,2}/)?.[0] ?? version` — extracts digits **for
   display only**, never gates. Name is everything before `@`.
@@ -76,7 +76,7 @@ Source: `.repos/package-manager-detector/src/detect.ts` (checkout at #66, pre-#7
   by evaluating the real parse: `nub@^0.2.0`/`~`/`>=`/exact all → `{name:"nub"}`.
 
 ### nypm #247 — field+name based, range-safe
-Source: `.repos/nypm/src/package-manager.ts`, `src/_utils.ts`.
+Source: `nypm/src/package-manager.ts`, `src/_utils.ts`.
 - nub entry has **no `lockFile`** (deliberate; L48-54) — detected only via `packageManager` /
   `devEngines` / `argv` (`/nub/`), never a lockfile.
 - `parsePackageManagerField` (`_utils.ts:278-301`): `.split("@")` name; version passed through,
@@ -87,7 +87,7 @@ Source: `.repos/nypm/src/package-manager.ts`, `src/_utils.ts`.
   (`_utils.ts:312-341`): major via `version?.match(/\d+/)?.[0]` → clean `"0"` for `"^0.2.0"`.
 
 ### turbo #13187 — EXACT semver required on BOTH fields (range breaks it)
-Source: `.repos/turborepo/crates/turborepo-repository/src/package_manager/mod.rs` (the #13187
+Source: `turborepo/crates/turborepo-repository/src/package_manager/mod.rs` (the #13187
 branch, single commit `4334f6d`).
 - `PACKAGE_MANAGER_PATTERN` (L252-253): `…(?P<manager>aube|bun|npm|nub|pnpm|yarn)@(?P<version>\d+\.\d+\.\d+…|https?://\S+)…`
   — version is **exact 3-part semver** (or a URL). A `^`/`~` prefix fails the regex →
