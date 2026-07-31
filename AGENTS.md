@@ -197,6 +197,32 @@ When a `nub install` or PM operation is mysteriously slow, do not hand-trace Rus
 - The per-file/per-strategy linker diagnostic (`aube_util::diag` → `AUBE_DIAG_FILE`; the `link_clonedir`/`link_macos_small_copy`/… tally) exists in aube but is gated off under nub (`env_prefix: None` in `pm_engine/identity.rs`) — flip it to `Some("NUB")` in a throwaway build to activate it.
 - Judge by the **strategy tally plus an A/B ratio** (the default `NodeLinker::Isolated` — see `vendor/aube/crates/aube-linker/src/lib.rs` — vs `--node-linker hoisted`), never a contended-host absolute. Always run a verified-clean warm `--offline` loop with rc=0.
 
+## A campaign stalls because findings become lanes (HIGH PRIORITY)
+
+When the job is to COVER a population — measure N packages, audit N files, migrate N call sites — the
+work that kills it is not difficulty. It is that each unit of coverage surfaces something interesting,
+and interesting things get investigated. Measured 2026-07-31: 20 commits landed after a
+coverage-measuring harness was built and **2 of them added coverage**. The other 18 went to mechanisms,
+schemas, docs and controls, every one individually defensible.
+
+- **A FINDING NEVER GETS A LANE.** It gets an entry in whatever the campaign produces (a catalog row, a
+  fix, a backlog line) and you move on. **Lanes are for coverage.** Two exceptions only: work that
+  UNBLOCKS coverage (the harness cannot run on a platform), and a case whose failure indicts the tool
+  itself rather than the subject.
+- **Before dispatching anything, state which coverage number it moves.** No number, no lane.
+- **Track the number where you will see it, and report it FIRST.** If coverage did not move since the
+  last check-in, that is the headline — not what was discovered.
+- **A terminal fallback is what makes this enforceable.** Where the campaign can end every unit with a
+  known-good answer (grant the whole disk, mark unsupported, accept the default), no finding *requires*
+  investigation. Build that escape hatch early: it converts "this one is strange" from a research
+  prompt into a one-line disposition.
+
+**Corollary, and the specific failure that caused the above: DIRECTION FROM THE MAINTAINER GOES INTO
+THE DURABLE RECORD IN THE SAME TURN IT ARRIVES.** "Stop chasing root causes, just grant what they
+need" was given, understood, acted on for one turn, never written down, lost to compaction, and
+reverted to instinct within hours. Conversational memory is not a record — if it is not in the file, it
+did not happen.
+
 ## Verify the artifact, not something adjacent to it (HIGH PRIORITY)
 
 Most wrong answers here trace to one habit: confirming that a thing EXISTS instead of confirming it is the thing you MEANT. A path that matches, a search that returns hits, a pipeline that exits 0, an authoritative-sounding doc comment, a filter that yields a tidy split, a results file one stage before the gates — each is a *plausible representation* of the truth, not the truth. **Name the artifact a claim rests on, and ask whether it is downstream of the question.**
