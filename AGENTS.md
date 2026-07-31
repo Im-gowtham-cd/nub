@@ -208,6 +208,47 @@ Keep containers ephemeral (`docker run --rm`), mount the repo read-only where yo
 
 When a `nub install` / PM operation is "mysteriously slow," do NOT trace Rust by hand — the **`pm-perf-tracing` skill** (`.claude/skills/pm-perf-tracing/SKILL.md`) is the canonical method, and it is what root-caused the hoisted-linker slowness (10.8s link → a single-threaded per-file `std::fs::copy` loop with the whole-dir `clonefile` fast path never firing). The essentials: `RUST_LOG=debug nub install` emits `phase:<name> <elapsed>` lines (the coarse resolve/fetch/**link** split) and works under nub today; the per-file/per-strategy linker diagnostic (`aube_util::diag` → `AUBE_DIAG_FILE`, the `link_clonedir`/`link_macos_small_copy`/… tally) EXISTS in aube but is gated off under nub (`env_prefix: None` in `pm_engine/identity.rs`) — flip it to `Some("NUB")` in a throwaway build to activate it. Judge by the **strategy tally + an A/B ratio** (e.g. the default — `NodeLinker::Isolated`, see `vendor/aube/crates/aube-linker/src/lib.rs` — vs `--node-linker hoisted`), not the contended-host absolute, and always run on a **verified-clean warm `--offline` loop with rc=0**. (The `dev-tracing-telemetry` thread is making this a first-class, release-stripped toggle with chrome-trace/flamegraph export — prefer it once landed.)
 
+## POINT YOUR INSTRUMENT AT A KNOWN ANSWER FIRST — the canary test (learned 2026-07-31, HIGH PRIORITY)
+
+Nearly every wrong answer produced here traces to one habit: **confirming that a thing EXISTS instead of
+confirming it is the thing you MEANT.** A path that matches, a search that returns hits, a pipeline that
+exits 0, a doc comment that sounds authoritative, a filter that yields a tidy split — each is a
+*plausible representation* of the truth, and each was accepted as the truth itself.
+
+**The fix is one cheap step: before trusting a search, filter, or probe, run it against a case whose
+answer you ALREADY KNOW.** If it does not find the known case, your instrument is broken — stop and fix
+it before reading any conclusion off it. This costs seconds and it is the only check that catches a
+false NEGATIVE, which is the failure no amount of staring at output will reveal.
+
+Four instances from one session, each caught only by luck or by someone else:
+
+- Grepped for a rule known to exist in `~/.claude/CLAUDE.md`; the pattern was wrong, the search returned
+  **nothing**, and "no results" read as "no such rule." One canary would have exposed the pattern.
+- Built with `--profile fast`, then grepped the generated file under `target/debug/` — a stale copy from
+  hours earlier. It reported the new entries **ABSENT** and nearly became a bug report against my own
+  correct change. Sorting candidate paths by mtime settled it in one command.
+- Classified packages by an invented regex over census fields; it put **`sharp` — which obviously
+  downloads prebuilt binaries — in "no download signal."** Recognizing one known-wrong row killed a
+  classifier that was about to drive grant policy.
+- Read `DOWNLOAD_HOSTS`'s doc comment ("the build jail's egress allowlist") as ground truth for days,
+  propagating it into status tables. **One grep for the const's consumers** would have shown the jail is
+  not among them.
+
+**Corollaries, each earned:**
+
+- **Enumeration undercounts by default.** "I have mapped the full surface" was said twice in one session
+  and was wrong both times (two docs and two code sites missed; separately, 3 fixtures fixed where 13
+  existed). State the expected count BEFORE searching and reconcile against it; when a sweep reports a
+  suspiciously round or small number, assume the pattern is too narrow, not that the surface is small.
+- **Trace a symbol to its CONSUMERS before describing what it does.** Prose near a definition describes
+  intent; the call sites describe behavior. When they disagree, the call sites win — and stale prose is
+  worse than none, because a reader hits it first.
+- **A filter that produces a surprising split is more likely broken than insightful.** Check a row you
+  can independently classify before believing the partition.
+- **A green wrapper is not a green job**, and the trap has a second motive beyond the documented
+  `cmd | head`: piping to `grep -v` to SUPPRESS NOISE is still a pipe, so `$?` is grep's. Redirect to a
+  file, capture `$?` on its own line, then read the log's own exit marker.
+
 ## Probing methodology — differential fixtures, empirical over source (learned 2026-06-10)
 
 The highest-yield way to find correctness bugs in nub is a **differential fixture**: a minimal fixture isolating ONE behavior, run against nub AND the reference tools it claims parity with (npm / pnpm / bun / node) on identical inputs — a divergence is the finding. This consistently beats happy-path app rounds: days of running real apps under nub surfaced almost nothing, while one five-minute `.env`-visibility fixture found two real bugs (a secret-leak over-reach where nub injected `.env` into non-node tools, and a NODE_ENV-cascade bug). Build the fixture, run every relevant tool, diff. Always compare against the thing you assert parity with — "nub does X" is unverified until "…and npm/pnpm/bun do Y on the same fixture" is in hand.
@@ -217,6 +258,7 @@ Three supporting disciplines, each earned the hard way:
 - **Test empirically before reading source, and before deciding.** A throwaway fixture in a sandbox answers "what does it actually do?" faster and more reliably than tracing Rust/Zig. When a decision hinges on a tool's real behavior, reproduce it — don't infer it from code.
 - **Read the COMMENTS and the resolution, not just the issue body.** A bug's body says what someone wanted; the maintainer comments and *why it was closed* say what's true. An "open feature request" can be a deliberate rejection with the real rationale in the thread — Bun's auto-`.env`-for-scripts looked like unmet demand in the body, but the comments showed it was intentionally rejected, with the core maintainer's root-cause analysis. Bodies alone will make you confidently wrong.
 - **Ground every claim about the system in code or an experiment — never memory.** A confidently-designed probe this session referenced `nub test`, which is not a command. Verify the actual surface (read `cli.rs`, or run it) before you build against it.
+- **A LANGUAGE/STDLIB semantics question is settled by a 10-line probe, never by reasoning.** `Path`/`OsStr`/`Components` equality and normalization are the repeat offenders: `Path::new("/a/b/.") == Path::new("/a/b")` is true (`Components` normalizes `.` away), and `Path::parent()` *trims* a trailing `.`. Reasoning from those rules still produced a **wrong mechanism** for a real bug — the guard blamed was never even reached — and it was handed to a sub-agent before a standalone `rustc` probe (no cargo, no target dir, seconds to run) settled it. If a diagnosis turns on what a std type does, run it first; label it UNVERIFIED if you truly cannot.
 
 And: **reversing a decision on new evidence is correct, not flip-flopping.** Architecture calls routinely dissolve or flip once the facts arrive — a "minimal vs elegant" split collapsed when investigation showed the elegant option was also the only *correct* one; a "keep this feature / lean in" call reversed twice as comments and a fixture came in. Present the decision, then keep probing; let evidence move you rather than defending the first answer.
 
