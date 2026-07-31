@@ -214,6 +214,18 @@ Most wrong answers here trace to one habit: confirming that a thing EXISTS inste
 - **Your own script's output is a claim, not data** — hold it to the same bar as a sub-agent's. A one-off classifier, `du`, or an ad-hoc grep filter has no more standing than an agent's assertion.
 - **A number or superlative must carry its derivation.** Say "N, counted by X" or say "roughly". Every costly wrong claim here was quantified — the number is what made it actionable, and vagueness would have been harmless.
 
+## Research the prior art — search the web early and often
+
+**Before designing, implementing, or debugging anything non-trivial, spend the first few minutes finding out how it has already been solved.** Nearly everything nub does — a resolver rule, a lockfile shape, a linker layout, a concurrency default, a config-discovery order, an OS confinement primitive — some production tool has already shipped, and usually written down why. Map that space first, so you are CHOOSING among known approaches instead of inventing one and discovering its failure modes yourself. This is a reflex, not a phase: it fires when you pick up a work item, when a design fork appears, and when something behaves surprisingly.
+
+- **Reach for `WebSearch` / `WebFetch` (or your harness's equivalent) eagerly and repeatedly.** One search is cheap and either hands you the answer or tells you you're first. There is no matching cost to over-searching, and the failure it prevents — a day spent on a problem someone already documented — is expensive.
+- **Search the FILED BUG before you build a theory.** When a dependency, runtime, or API behaves in a way that surprises you, search its issue tracker, release notes, and the integrating projects' issues FIRST. Theorizing from local evidence alone produces confident, wrong stories that survive until the next piece of evidence kills them.
+- **Read another tool's SOURCE locally, never one file at a time over HTTP.** `git clone --depth 1 <repo> .repos/<name>` (gitignored), then grep and read. A shallow clone takes seconds and gives you a whole consistent tree; check what `.repos/` already holds before cloning.
+- **The highest-value output is what was TRIED AND ABANDONED** — recorded in issue threads, release notes, and RFCs, and invisible in the code. A knob that shrank across releases, or a feature that shipped and was reverted a release later, tells you more than the current implementation does.
+- **Check whether their constraint is YOUR constraint before importing the lesson.** Another project's rejected approach may have been rejected for a reason nub does not share, which can make an option they closed off correct here. A survey that only tells you what to copy is half-read.
+- **Name it in the dispatch prompt.** A fresh-context sub-agent does not inherit this habit and will reason from first principles unless told to survey.
+- **Timebox it.** A high-level scan to map the space, not a research thread unless the work is one. A mechanical fix skips it.
+
 ## Probing methodology — differential fixtures, empirical over source
 
 The highest-yield way to find correctness bugs in nub is a **differential fixture**: a minimal fixture isolating ONE behavior, run against nub AND the reference tools it claims parity with (npm / pnpm / bun / node) on identical inputs. The divergence is the finding. This beats happy-path app rounds by a wide margin. "nub does X" is unverified until "…and npm/pnpm/bun do Y on the same fixture" is in hand.
@@ -278,6 +290,10 @@ Feature-specific harnesses live under `tests/<feature>/` — e.g. `tests/pnp/` b
 ## Chat responses
 
 **Plain language, colleague tone.** Use the minimum words that convey every point: direct, calm, collaborative, one technical colleague to another. Simplest accurate term; explain any necessary jargon at first use. State conclusions and tradeoffs; cut preamble, repetition, hedging, and ceremony. Concision never means omission — keep every fact needed for the decision. Full cross-surface tone bar: [`PROSE.md`](PROSE.md).
+
+**The last message before you come to rest must stand alone.** It is the whole interface the reader gets: they see it in a queue, later, without your working context and without scrolling the transcript. So it accounts for everything you did since their last message — what changed and where, what you verified and how, what you decided and why, and what is still open. Never point at "the above", at a tool call, or at a file they have not read.
+
+**Self-contained is a floor on content, not a licence for length.** Lead with the outcome, cut the chronology of how you got there, and drop anything that does not change what the reader now knows or does. A short list of what landed beats a retelling of the session.
 
 **Prefer visual structure over dense prose.** A small status table, decision matrix, checklist, flow, or text diagram when it makes the answer easier to scan; for sequences show the path directly (`current → next → done`). Use a table when several items share fields, a list when order doesn't matter, a numbered list for a sequence, a callout for the one fact that could change the decision. Never a middot-separated or run-on inline list where real structure is clearer. Structure must clarify, not decorate.
 
