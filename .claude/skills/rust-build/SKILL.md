@@ -120,6 +120,34 @@ So `fmt` + `clippy` + `test` can all be green while `target/fast/nub` is hours s
 
 **Bind the artifact to the source before trusting a fixture result.** An mtime newer than your last edit is necessary and not sufficient — a concurrent build can overwrite the path mid-run. Prove it positively by exercising a behavior only your change produces, and re-hash afterwards (or copy the binary aside and probe the copy).
 
+## ANY cargo command REWRITES that profile's binary — with ITS features, not yours
+
+`cargo build -p nub-cli --profile fast --features nub-cli/build-jail-catalog-override` then
+`cargo test -p nub-cli --profile fast <filter>` leaves `target/fast/nub` built **without** the
+feature. `test` rebuilt the bin under the default feature set and clobbered it. Nothing warns;
+the binary just quietly becomes a different one.
+
+**So re-arm the binary after ANY bare cargo invocation on the same profile**, before running a
+harness or a fixture against it:
+
+```sh
+cargo test -p nub-cli --profile fast <filter>          # clobbers target/fast/nub
+scripts/rust-build.sh build -p nub-cli --profile fast \
+  --features nub-cli/build-jail-catalog-override        # re-arm before probing
+```
+
+Cost when missed: a build-jail catalog probe reported `BROKEN-EVEN-WITH-EVERYTHING` for a package
+that installs fine, because the featureless binary refused the override. It was diagnosable only
+because nub fails LOUD there (*"NUB_BUILD_JAIL_CATALOG is set, but this binary was not built with
+the build-jail-catalog-override feature… Refusing rather than running the compiled-in catalog
+under an override's name"*). A feature that degrades silently would have cost far more.
+
+Related and distinct: `--features nub-sandbox/build-jail-catalog-override` enables it on the
+sandbox crate ONLY, so anything gated inside nub-cli compiles out while the sandbox-side banner
+still prints — the override looks live and half of it is absent. `nub-cli` forwards the feature
+(`crates/nub-cli/Cargo.toml`), so the bare name and `nub-cli/…` are equivalent; the `nub-sandbox/…`
+form is the wrong one.
+
 ## The gate's exit status must be CARGO's — three ways it silently isn't
 
 - **A pipe.** `cargo … | tail` gives you the PIPE's status.
