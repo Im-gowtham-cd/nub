@@ -44,6 +44,14 @@ The flag is trustworthy. Comparing it against the full packument's `scripts` obj
 
 So `hasInstallScript` is exactly `scripts ∩ {preinstall, install, postinstall} ≠ ∅`. Note that `prepare` and the `pre*`/`post*` publish hooks do not set it, which matches npm's own behavior — those keys never run for a registry dependency.
 
+### The field is omitted when false, and it is not a recent addition
+
+Two properties worth confirming before building on this field, since both would be easy to get wrong in the unsafe direction.
+
+**Absent means false.** The key is not always present: `node-sass` omits it on 2 of 148 versions, `canvas` on 1 of 159. Each of those versions has no install script in the full packument, so the registry omits the key rather than emitting `false`. Treating an absent key as false is therefore correct — but treating it as *unknown* and skipping the version would silently drop real data, so the distinction is worth encoding deliberately rather than relying on a truthiness check.
+
+**It is backfilled across the whole history, not applied going forward.** It is present and true on `canvas@0.0.1`, `bcrypt@0.1.2`, `fsevents@0.1.1` and `node-sass@0.2.0` — versions published years before the abbreviated form existed. A consumer holding a cached packument from any era will therefore still see the field.
+
 ### Full packuments
 
 Requesting with `accept: application/json` returns the full document, which carries the complete per-version `scripts` object and the `time` map of publish dates. It does **not** carry `hasInstallScript` — the two forms are complementary, not nested.
