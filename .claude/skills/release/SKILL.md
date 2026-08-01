@@ -31,7 +31,10 @@ A nub release is tag-triggered and fully automated. Pushing a `v*` tag fires `.g
 ## Step 1 — Pre-flight: confirm green, pick the version, enumerate the changeset
 
 ```bash
-git -C "$(git rev-parse --show-toplevel)" switch main && git pull --ff-only
+git -C "$(git rev-parse --show-toplevel)" switch main
+# NOT `pull --ff-only`: pull.rebase=true makes pull abort on any dirty file, and the shared tree
+# always carries some agent's WIP. `merge --ff-only` has no clean-tree precondition.
+git fetch origin && git merge --ff-only origin/main
 git fetch --tags
 PREV=$(git describe --tags --abbrev=0)        # e.g. v0.1.2 — the latest release tag
 echo "Latest tag: $PREV"
@@ -65,7 +68,7 @@ git tag v<ver>
 git push origin main --tags
 ```
 
-Then fast-forward the shared tree: `git -C <shared-tree> pull --ff-only`.
+Then fast-forward the shared tree: `git -C <shared-tree> fetch origin && git -C <shared-tree> merge --ff-only origin/main` (never `pull --ff-only` — it aborts on the shared tree's ever-present WIP).
 
 The workflow runs, in order: `verify` (version + tag-match), `primer`, `test` + `conformance` + `glibc-floor-guard` + `pre-publish-gate`, `build` (8 platforms), `publish-npm` (10 packages, idempotent), `github-release` (release + 16 assets, independently re-runnable), `test-install` / `test-install-musl`.
 

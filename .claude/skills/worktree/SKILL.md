@@ -65,10 +65,12 @@ The shipped default symlinks `.repos/` (read-only reference checkouts of Node, B
 The shared tree drifts behind `origin/main` because every landing goes worktree → push → merge and nothing pulls it back. After merging any PR or pushing to origin:
 
 ```bash
-git -C <shared-tree> pull --ff-only
+git -C <shared-tree> fetch origin && git -C <shared-tree> merge --ff-only origin/main
 ```
 
-Corollary: **do NOT commit directly in the shared tree's checkout** — direct commits make it diverge rather than merely fall behind, which breaks `pull --ff-only`. This keeps files current; loaded `.claude/` hooks still need a session restart.
+**Never `git pull --ff-only` here.** This repo sets `pull.rebase=true`, so `pull` runs rebase's precondition check first and aborts with `cannot pull with rebase: You have unstaged changes` on ANY dirty file — and the shared tree always carries some agent's WIP, so that form fails 100% of the time. `merge --ff-only` has no clean-tree precondition; it refuses only if the incoming commits would overwrite a locally-modified file.
+
+Corollary: **do NOT commit directly in the shared tree's checkout** — a direct commit makes it diverge rather than merely fall behind, and a diverged tree cannot be fast-forwarded at all. If you take the sanctioned docs/control-surface exception, sync immediately before committing and push in the same breath; never rest with an unpushed commit there. This keeps files current; loaded `.claude/` hooks still need a session restart.
 
 ## Clean up after a merge
 
