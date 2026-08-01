@@ -120,6 +120,22 @@ So `fmt` + `clippy` + `test` can all be green while `target/fast/nub` is hours s
 
 **Bind the artifact to the source before trusting a fixture result.** An mtime newer than your last edit is necessary and not sufficient — a concurrent build can overwrite the path mid-run. Prove it positively by exercising a behavior only your change produces, and re-hash afterwards (or copy the binary aside and probe the copy).
 
+## Long cargo runs go in a BACKGROUND shell — never poll for them
+
+A cold build, `--all-targets` clippy or a full `cargo test` outlives the foreground timeout. Start
+it with the harness's background mechanism and let the completion notification wake you. **Do not
+write a wait loop**, and do not sleep on it: the harness already tracks it, so a poller is pure
+waste and it can be WRONG in both directions.
+
+Measured cost of getting this wrong: a loop polling `pgrep -f "cargo|rustc"` reported "still
+building" for ten minutes AFTER the build had finished — `pgrep -f` matches the full command line
+INCLUDING the environment, so every process with `.cargo/bin` in its `PATH` matched. If you must
+ask whether a compiler is running, match the executable name exactly:
+
+```sh
+ps -Ao comm= | grep -cE '^(rustc|cargo)$'      # 0 = idle
+```
+
 ## ANY cargo command REWRITES that profile's binary — with ITS features, not yours
 
 `cargo build -p nub-cli --profile fast --features nub-cli/build-jail-catalog-override` then
