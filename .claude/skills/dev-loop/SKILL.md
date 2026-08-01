@@ -46,7 +46,11 @@ Two sharing worktrees serialize on cargo's build lock — a latency cost, never 
 cargo build -p nub-cli --profile fast
 
 # Full dev binary + N-API addon, symlinked on PATH as nub-dev / nubx-dev:
-make install-dev        # runs addon-fast, then `cargo build --profile fast`, then symlinks target/fast/nub
+make install-dev        # addon-fast, then `scripts/rust-build.sh build --profile fast`, then symlinks
+                        # nub-dev/nubx-dev -> $(scripts/rust-build.sh --print-target)/fast/nub — the
+                        # wrapper's hashed bucket under ~/.cache/nub/, NOT the repo's target/. The bucket
+                        # id tracks depended-on crate content, so a change under vendor/aube or nub-core
+                        # moves it: re-run install-dev or nub-dev keeps resolving to the previous bucket.
 
 # Just the native addon (oxc transpiler), fast profile:
 make addon-fast         # -> runtime/addons/nub-native.node
