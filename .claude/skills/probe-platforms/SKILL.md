@@ -77,11 +77,22 @@ MEASURED on matched GCE `e2-standard-8` / `pd-balanced` VMs, 3,000 small file cr
 roughly two-thirds of it — comparing that against a bash redirect is not varying one thing. Use a
 raw write on both sides before quoting any cross-OS I/O ratio.
 
-Why it matters: a probe cell installs a whole dependency tree (puppeteer ≈ 6,200 files) and a walk
-runs many cells, so a ~6x file-create penalty compounds into the tens of minutes per package
-observed on Windows. **Budget an order of magnitude more runner time for a Windows corpus, and size
-shards accordingly** — and note this explains the slowness WITHOUT the confinement layer being
-involved at all.
+⛔ **DO NOT EXTRAPOLATE THAT RATIO TO INSTALL TIME — I did, and it was wrong.** A microbenchmark of
+raw file creation is not a workload. Measured with the SAME nub binary on matched VMs:
+
+| install | Linux | Windows | ratio |
+|---|---|---|---|
+| trivial (`is-odd`) | 493 ms | 744 ms | **1.5x** |
+| file-heavier (`typescript`) | 1,675 ms | 3,218 ms | **1.9x** |
+
+So a real install is **~1.5–2x**, not 6x: installs are dominated by network and archive work, and
+the file-create penalty is a minority of the total. I first wrote "budget an order of magnitude" here
+off the microbenchmark alone; that was a wrong planning number in a durable doc. **Time the actual
+workload before sizing anything.**
+
+(Note the file COUNTS in that test are not comparable — `Get-ChildItem -Recurse` reported 9 where
+`find -L` reported 264, because neither traverses junctions the same way. The TIMES are the
+comparable part; see the junction-traversal trap above.)
 
 ## Linux — all measured
 
