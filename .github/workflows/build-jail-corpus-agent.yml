@@ -67,6 +67,13 @@ jobs:
       id-token: write
       contents: write          # the agent pushes its branch
       pull-requests: write     # ...and opens the PR
+    env:
+      # MEASURED (see build-jail-corpus-3os.yml, the mechanical predecessor of this workflow):
+      # Windows gives the main thread a 1 MB stack against Linux's 8 MB, and the unoptimized build
+      # overflows it inside `nub install` (0xC00000FD, STATUS_STACK_OVERFLOW) BEFORE any lifecycle
+      # script runs. Without this the whole Windows shard measures a debug-build frame-size
+      # artifact rather than the jail — and every verdict would be a lie.
+      RUSTFLAGS: ${{ inputs.runner == 'windows-latest' && '-C link-arg=/STACK:8388608' || '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
