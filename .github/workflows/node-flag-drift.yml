@@ -18,6 +18,7 @@ on:
       - scripts/node-flag-inventory.mjs
       - scripts/check-node-flag-drift.mjs
       - scripts/node-flag-inventory.snapshot.json
+      - scripts/node-flag-drift-acknowledged.json
       - crates/nub-core/src/node/feature_matrix.rs
       - .github/workflows/node-flag-drift.yml
   push:
@@ -26,6 +27,7 @@ on:
       - scripts/node-flag-inventory.mjs
       - scripts/check-node-flag-drift.mjs
       - scripts/node-flag-inventory.snapshot.json
+      - scripts/node-flag-drift-acknowledged.json
       - crates/nub-core/src/node/feature_matrix.rs
       - .github/workflows/node-flag-drift.yml
   schedule:
