@@ -63,6 +63,26 @@ on the accusation — and when you fix a misleading diagnostic, it pays for itse
   **MSVC-only** flag that breaks a GNU link — it is required under MSVC because Windows gives the
   main thread 1 MB against Linux's 8 MB.
 
+### Windows filesystem speed — budget ~6x Linux, and beware the benchmark itself
+
+MEASURED on matched GCE `e2-standard-8` / `pd-balanced` VMs, 3,000 small file creates:
+
+| | time |
+|---|---|
+| Linux (bash redirect) | **181 ms** |
+| Windows (`[System.IO.File]::WriteAllText`) | **1,142 ms** |
+| Windows (PowerShell `Set-Content`) | 3,156 ms |
+
+**~6x, not 17x.** The first Windows figure was `Set-Content`, whose cmdlet/pipeline overhead is
+roughly two-thirds of it — comparing that against a bash redirect is not varying one thing. Use a
+raw write on both sides before quoting any cross-OS I/O ratio.
+
+Why it matters: a probe cell installs a whole dependency tree (puppeteer ≈ 6,200 files) and a walk
+runs many cells, so a ~6x file-create penalty compounds into the tens of minutes per package
+observed on Windows. **Budget an order of magnitude more runner time for a Windows corpus, and size
+shards accordingly** — and note this explains the slowness WITHOUT the confinement layer being
+involved at all.
+
 ## Linux — all measured
 
 - **An AUTHORED Landlock grant naming a path that does not exist makes the whole policy
