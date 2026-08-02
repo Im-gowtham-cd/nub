@@ -90,6 +90,17 @@ jobs:
       - name: Run agent
         uses: pullfrog/pullfrog@v0 # zizmor: ignore[unpinned-uses] matches the vendored pullfrog.yml template, which tracks the major tag
         with:
+          # ⛔ TIMEOUT IS LOAD-BEARING. The action defaults to 1h; a corpus shard is hours of real
+          # network installs, so the default would kill every run mid-sweep and the records would
+          # look like a partial corpus rather than a truncated one.
+          timeout: "5h"
+          # Feature branches only — blocks pushes to the default branch, branch deletion and tags.
+          # The agent needs to push its own branch and nothing else.
+          push: restricted
+          model: anthropic/claude-opus
+          # This is diagnosis work, not mechanical harvest: the whole point is that it debugs what
+          # it finds rather than shipping logs back.
+          effort: high
           prompt: |
             You are measuring one shard of nub's build-jail capability corpus on ${{ inputs.runner }},
             and fixing what you find. You are on a disposable CI runner: nothing here is precious,
@@ -125,10 +136,21 @@ jobs:
                that exposed it. Do NOT rabbit-hole a single package: a package that resists is data
                about the generator. Some failures are genuinely unfixable (a missing system library, a
                package reading a file absent from its own tarball) — record those honestly and move on.
-            6. Open a PR against `${{ inputs.base_branch }}` with: your `results/runs/**/results.json`
-               records, any harness/nub fixes, and a body that states COVERAGE FIRST (how many of your
-               shard's entries produced a record), then the verdict tally, then each fix with the
-               package and measurement that proves it.
+            6. Write `CORPUS-REPORT.md` at the repo root. This file is how your findings reach the
+               orchestrator, so it must stand alone. In this order:
+                 - COVERAGE FIRST: how many of your shard's entries produced a record, and how many
+                   did not. Survivors of a partial sweep are a BIASED SAMPLE, not a result.
+                 - the verdict tally;
+                 - every fix you made, each with the package and the measurement that proves it
+                   (before -> after), so the orchestrator can re-verify rather than take your word;
+                 - every failure you could NOT explain, said plainly, with the log path. An honest
+                   "I could not reproduce this" is worth more than a guess.
+                 - anything you tried that turned out to be an invalid reproduction — those are the
+                   most valuable notes of all.
+            7. COMMIT and PUSH your branch. Do NOT open a pull request — the orchestrator reviews the
+               branch and integrates it. Include your `results/runs/**/results.json` records, any
+               harness/nub fixes, and `CORPUS-REPORT.md`. Report the exact branch name you pushed as
+               the last line of your output.
 
             ## What matters most on THIS runner
 
@@ -157,3 +179,18 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # ⛔ THIS IS HOW THE AGENT'S REASONING GETS BACK OUT, and it is the whole log story.
+          #
+          # Read from the action's source rather than guessed: pullfrog already invokes Claude Code
+          # with `--verbose` (agents/claude.ts), and its own logger gates debug output on
+          # `LOG_LEVEL === "debug" || ACTIONS_STEP_DEBUG === "true"` (utils/log.ts:45, and the same
+          # gate in utils/activity.ts). Setting it here streams per-tool activity to stdout, which
+          # lands in the Actions job log.
+          #
+          # Retrieve it with:  gh run view <run-id> --log
+          #                    gh run view <run-id> --log-failed     # just the failing step
+          #
+          # No artifact-scraping step is needed. An earlier draft globbed ~/.claude/projects and
+          # the opencode dirs for session JSONL; that was guesswork about a runtime whose choice is
+          # not visible from the workflow, and the job log supersedes it.
+          LOG_LEVEL: debug
