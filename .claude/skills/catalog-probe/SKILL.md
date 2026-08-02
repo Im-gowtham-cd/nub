@@ -71,6 +71,41 @@ Rules for reading a sweep:
   banner, and an install log ends with a summary — the cause is usually ~40 lines earlier. Five
   successive wrong diagnoses of one package all came from reading the tail.
 
+## The instrument has no test — the failure with no symptom
+
+**A change to the fixture or to `baseline.json` is a change to the measuring instrument.** Its
+failure mode is not an error; it is that every package measures as needing NOTHING. Every verdict
+`MINIMUM`, coverage 100%, nothing fails. Three times in one session:
+
+- A hand-written `package-lock.json` with an empty `packages` map — nub believed the project had no
+  dependencies. Puppeteer's control fell from **9,629 installed files to 32**.
+- A baseline entry using `$home/...` — the wrong grammar (see sentinels below), so the jail failed
+  to **compile** and no lifecycle script spawned. Surfaced as `failed to spawn`, which reads as a
+  nub defect.
+- Worst: a measurement taken *during* the second window was written up as a finding — "this
+  package's grant dissolved" — when the jail was simply not running.
+
+All three were caught by **disbelieving the number**, never by a check. Eight packages needing
+nothing, including ones that cannot work without downloading a binary, is not a measurement.
+
+**The pre-flight now runs a FIXTURE CANARY**: `puppeteer@25.4.0` must install >5000 files and be
+materialized, or the batch refuses. It asserts the control's SHAPE, not a verdict — a package that
+legitimately needs nothing looks identical either way, so `is-odd` cannot catch this.
+`NUB_PROBE_SKIP_CANARY=1` disables it when deliberately testing the fixture.
+
+**Never report a measurement taken while the harness was known-broken. Re-run it first.**
+
+## Three `$` vocabularies, and they are not interchangeable
+
+| Namespace | Valid names | Used by |
+|---|---|---|
+| Compiler fs sentinels | `$cache`, `$tmp` (closed set), plus `~/` | baseline paths, catalog fs rules |
+| Harness path tokens | `$proj/`, `$store/`, `$home/` | recorded paths, `writePaths` entries |
+| Network host sets | `$<name>` on the net axis | net rules only |
+
+`$home` is meaningful in the second and **invalid** in the first. The compiler rejects an unknown
+sentinel by name and lists the valid ones — that message is what makes this a one-step diagnosis.
+
 ## Verdicts
 
 | Verdict | Means | Do |
