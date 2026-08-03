@@ -284,6 +284,43 @@ Stated precisely, because it is easy to overclaim: this fixes the **leak scope**
 
 nub is both a producer and a consumer of this channel: it injects its own augmentation tokens into `NODE_OPTIONS`, and it compiles `nub.jsonc` `preload:` entries into the same variable.
 
+### Most of this list is already nub's job
+
+The single most useful cross-reference: a large share of the ecosystem's top preloads exist to do something nub already does natively, without a preload at all. Read against the ranking above, the survey is substantially an inventory of what nub replaces.
+
+| Surveyed tool | DL/wk | What nub already ships |
+|---|---|---|
+| `jiti` (as a TS runner) | 171.4M | the transpiler — `registerHooks` fast tier / `module.register` compat tier |
+| `dotenv` | 167.0M | the `.env` cascade in Rust, before the child spawns |
+| `source-map-support` | 132.9M | `--enable-source-maps` in `ALWAYS_INJECT` ([`flags.rs:22`](../../crates/nub-core/src/node/flags.rs)) |
+| `tsconfig-paths` | 99.3M | tsconfig discovery, `extends`, and the `paths` matcher, all native (`nub-native loadTsconfig`, a `get-tsconfig@4.14.0` port; `resolveTs` runs the matcher) |
+| `tsx` · `ts-node` · `sucrase` · `esbuild-register` · `@swc-node/register` | 83M · 48M · 47M · 13M · 4.7M | same transpiler |
+| `abort-controller` | 61.4M | `CLOBBER_MAP` rewrites the import to the global ([`transform-core.mjs:222`](../../runtime/transform-core.mjs)) — likewise `urlpattern-polyfill`, `@js-temporal/polyfill` |
+
+So the interesting question for most of these is not "should nub integrate it" but "does nub's native path stay correct when the tool is *also* present" — which is the collision matrix, not an integration decision.
+
+### The defensive patterns are already implemented too
+
+Checking the survey's coexistence playbook against the code, rather than assuming:
+
+| Pattern found in the wild | nub's existing implementation |
+|---|---|
+| `tsx` reads **both** `NODE_OPTIONS` and `execArgv` to pick its tier | `shouldAutoAsyncTierAtPreload()` = `nodeHookComposeBroken() && foreignAsyncLoaderFlagPresent()` ([`preload-common.cjs:280`](../../runtime/preload-common.cjs)), reading both channels, plus the launcher's predictive argv scan |
+| Sentinel env var rather than stripping `NODE_OPTIONS` (dd-trace's forced retreat) | `__NUB_ENV_OWNER_WRAPPED`, and `is_reentrant_in` keying on nub's own token ([`spawn.rs:809`](../../crates/nub-core/src/node/spawn.rs)) |
+| Absolute paths only, never bare/relative specifiers | nub emits absolute paths and `file://` URLs |
+| Append to a pre-existing `NODE_OPTIONS`, never assign | nub appends ([`spawn.rs:1086`](../../crates/nub-core/src/node/spawn.rs)) |
+| Yarn PnP needs its token installed first | PnP token pushed before nub's own ([`spawn.rs:1098`](../../crates/nub-core/src/node/spawn.rs)) |
+| `module.register()` DEP0205 on Node 26 | already wrapped and suppressed, with a comment explaining nub cannot use `registerHooks` on the compat and `--no-experimental-require-module` paths |
+| `NODE_OPTIONS` smuggled through an env file | `ENV_FILE_DENYLIST` — **stricter than Node's own `--env-file`**, which parses and applies it |
+| npm/pnpm `node-options` clobbering | nub **appends** `npm_config_node_options` to its own augmentation for lifecycle scripts ([`pm_engine/mod.rs:1763`](../../crates/nub-cli/src/pm_engine/mod.rs)) instead of assigning over it |
+
+Measured confirmation of the last row, on the same fixture that destroys the ambient value under real npm:
+
+| | nub's preload survives? | user's `--max-old-space-size=333` applied? |
+|---|---|---|
+| `npm run` | **no** | yes |
+| `nub run` | **yes** | **no** — see the parity gap below |
+
 **Already correct, verified by measurement:**
 
 - nub **appends** to a pre-existing `NODE_OPTIONS` rather than clobbering it.
@@ -304,6 +341,16 @@ nub is both a producer and a consumer of this channel: it injects its own augmen
 The third row needs only one `.cjs` preload entry: nub's own preload is the first `--require`, Next's Record-keyed reformat keeps the last, and nub's transpilation and augmentation vanish under `next dev` / `next build` with no error. Scope is bounded — it requires a project that uses `preload:` *and* runs Next — but it fails silently.
 
 **The fix is entirely under nub's control:** emit at most one `--import` and at most one `--require`, chaining additional entries inside nub's own preload module. Single-token input round-trips through Next intact.
+
+**A second, narrower gap found by the same cross-reference: `nub run` silently drops `node-options`.** The `npm_config_node_options` parity in `apply_lifecycle_augmentation` is the **only** call site — it covers lifecycle scripts during PM operations, not the `nub run` path. Differential on one fixture with `node-options=--max-old-space-size=333` in `.npmrc`:
+
+| | resulting `NODE_OPTIONS` for the script |
+|---|---|
+| `pnpm run` | `--max-old-space-size=333` |
+| `npm run` | `--max-old-space-size=333` |
+| **`nub run`** | nub's own tokens only — **the user's flag is silently dropped** |
+
+`node-options` is a real npmrc field that pnpm honors, so under the pnpm-mirroring CLI rule this is a parity bug. It is the inverse of the clobber hazard: nub is immune to having its augmentation destroyed, at the cost of ignoring the user's setting entirely. The fix is to reuse the existing append logic on the `run` path.
 
 **A second consideration, from the Bun measurement.** If the `preload:` leak scope (documented as Defect 1 in [varlock-integration.md](varlock-integration.md)) is worth fixing, config-file rediscovery is the shape a peer runtime already ships, and it preserves the in-project script coverage that `NODE_OPTIONS` inheritance is currently load-bearing for.
 
@@ -326,4 +373,5 @@ The third row needs only one `.cjs` preload entry: nub's own preload is the firs
 ## Changelog
 
 - 2026-08-03 — Initial write-up.
+- 2026-08-03 — Cross-referenced the whole survey against what nub already implements. Most of the top-ranked preloads turn out to be things nub replaces natively (source maps, tsconfig `paths`, TS transpilation, the `.env` cascade, the `CLOBBER_MAP` polyfills), and every defensive pattern found in the wild is already in the code (dual-channel tier detection, sentinel-not-stripping, absolute paths, append-not-assign, PnP token ordering, DEP0205 suppression, the env-file denylist). Corrected the npm/pnpm `node-options` clobber claim — nub appends rather than assigns and is immune — and recorded the inverse parity gap it exposed: `nub run` drops `node-options` entirely, where npm and pnpm apply it.
 - 2026-08-03 — Added the env-loader detail: the universal silent first-writer-wins precedence, the ciphertext injection that Node's own `--env-file` shares, the two `--env-file` premise corrections, the run-wrapper family and its measured ~60–80 ms cost, `varlock/config` inheriting the `auto-load` fork bomb, and the schema-validation family being a different shape. Ranked what is worth integrating, with the tool-agnostic ciphertext guard first.
