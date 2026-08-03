@@ -192,7 +192,26 @@ Median of 5 runs of `node noop.js`, real installed packages, no collector listen
 | `--import @sentry/node/preload` | 250 ms | +206 ms |
 | `--require @opentelemetry/auto-instrumentations-node/register` | **9,107 ms** | **+9.1 s** |
 
-The OTel figure was bisected, not guessed: `OTEL_SDK_DISABLED=true` → 190 ms; `OTEL_METRICS_EXPORTER=none` → 1,209 ms; `OTEL_NODE_RESOURCE_DETECTORS=none` → 8,093 ms (not the cause). **About 8 s is the metrics exporter's shutdown flush against an unreachable `localhost:4318`**, and even with all exporters off the module load of ~40 instrumentation packages still costs **1.2 s per process**.
+The OTel figure was bisected, not guessed: `OTEL_SDK_DISABLED=true` → 190 ms; `OTEL_METRICS_EXPORTER=none` → 1,209 ms; `OTEL_NODE_RESOURCE_DETECTORS=none` → 8,093 ms (not the cause on its own). **About 8 s is the metrics exporter's shutdown flush against an unreachable `localhost:4318`.**
+
+**The residual decomposes further, and it is not module load.** Re-measured 2026-08-03 on node 26.5.0 with a positive control asserting the SDK actually attached, and with the OTLP endpoint pinned to an unused port (the default 4318 was contended). Turning the metrics exporter *and* the resource detectors off together drops the cost to **219 ms** — not the ~1.2 s that `OTEL_METRICS_EXPORTER=none` alone leaves. So the cost is **three independent, additive terms**:
+
+| Term | Cost | Notes |
+|---|---|---|
+| Attach floor — SDK + ~40 instrumentation packages loading | **~140 ms** | the only irreducible part |
+| Resource detectors — cloud-metadata probes that time out off-cloud | **~1,020 ms** | `OTEL_NODE_RESOURCE_DETECTORS` |
+| Metrics-exporter shutdown flush against an unreachable endpoint | **~7,150 ms** | vanishes entirely when a collector is listening |
+
+| Configuration | No collector | Collector listening |
+|---|---|---|
+| baseline, no preload | 80 ms | 84 ms |
+| attached, default config | 8,398 ms | 1,266 ms |
+| attached + `OTEL_SDK_DISABLED=true` | 247 ms | 243 ms |
+| attached + `OTEL_METRICS_EXPORTER=none` | 1,272 ms | 1,241 ms |
+| attached + `OTEL_NODE_RESOURCE_DETECTORS=none` | 7,440 ms | 253 ms |
+| attached + both | 219 ms | 224 ms |
+
+The practical consequence is that **the overwhelming majority of the cost is decidable before the process starts** — whether a collector is reachable, and whether the cloud detectors can possibly succeed — which is a decision a launcher can make and an in-process SDK cannot.
 
 ### 4. Consumers that re-parse `NODE_OPTIONS` corrupt repeated flags
 
@@ -375,3 +394,4 @@ The third row needs only one `.cjs` preload entry: nub's own preload is the firs
 - 2026-08-03 — Initial write-up.
 - 2026-08-03 — Cross-referenced the whole survey against what nub already implements. Most of the top-ranked preloads turn out to be things nub replaces natively (source maps, tsconfig `paths`, TS transpilation, the `.env` cascade, the `CLOBBER_MAP` polyfills), and every defensive pattern found in the wild is already in the code (dual-channel tier detection, sentinel-not-stripping, absolute paths, append-not-assign, PnP token ordering, DEP0205 suppression, the env-file denylist). Corrected the npm/pnpm `node-options` clobber claim — nub appends rather than assigns and is immune — and recorded the inverse parity gap it exposed: `nub run` drops `node-options` entirely, where npm and pnpm apply it.
 - 2026-08-03 — Added the env-loader detail: the universal silent first-writer-wins precedence, the ciphertext injection that Node's own `--env-file` shares, the two `--env-file` premise corrections, the run-wrapper family and its measured ~60–80 ms cost, `varlock/config` inheriting the `auto-load` fork bomb, and the schema-validation family being a different shape. Ranked what is worth integrating, with the tool-agnostic ciphertext guard first.
+- 2026-08-03 — **Correction to the OTel cost bisection.** The ~1.2 s residual left by `OTEL_METRICS_EXPORTER=none` was attributed to the module load of ~40 instrumentation packages. Re-measured with a positive control and a pinned OTLP port: it is ~1.02 s of **resource detectors** plus only ~0.14 s of module load — turning both off lands at 219 ms. Added the full no-collector/collector-listening matrix and the three-term decomposition, plus the observation that the two dominant terms are decidable before the process starts.
