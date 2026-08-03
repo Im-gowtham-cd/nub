@@ -15,6 +15,8 @@ Task playbooks ("skills") live as plain-markdown `SKILL.md` files under `.claude
 
 `.claude/skills/*` is this repo's own agent tooling; the "agent-agnostic, never overfit to Claude" rule governs copy that ships to *users'* agents, not these playbooks.
 
+Per-agent config is tracked for **every** agent, not just Claude: `.claude/settings.json` + `.claude/hooks/` (Claude Code), `.codex/config.toml` + `.codex/hooks.json` (Codex), and `.mcp.json` (the shared `chrome-devtools` MCP server). The two agents read different config files, so the `gh-comment-guard` hook script exists once per agent — `.githooks/pre-push` requires the copies stay byte-identical, and rejects a hook command that hardcodes an absolute home path. Codex sets no project-dir environment variable of its own (no `CODEX_PROJECT_DIR`, and `$CLAUDE_PROJECT_DIR` is Claude-only), so a Codex hook path must use `$(git rev-parse --show-toplevel)`.
+
 When present, `AGENTS.local.md` (gitignored, not in a clean checkout) adds maintainer-local orientation — orchestration workflow, dispatch policy, pointers into local-only directories. It is an optional overlay; this file is self-sufficient without it.
 
 ## Non-negotiables
