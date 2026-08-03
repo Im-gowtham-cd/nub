@@ -86,6 +86,75 @@ Three independent signals, all pointing the same way.
 
 The counter-signal: `node --env-file` (92,128 code hits) is absorbing the `dotenv` use case into the runtime itself.
 
+## The env-loader category, in detail
+
+This is varlock's own category, so it was surveyed closely.
+
+**A preload structurally cannot set `NODE_OPTIONS`.** Node has already parsed the variable by the time any preload runs. This is [motdotla/dotenv#314](https://github.com/motdotla/dotenv/issues/314), closed unfixed in 2018. `--env-file` and every run-wrapper can; no preload ever will. It is the cleanest statement of what the two shapes are actually for.
+
+### Precedence: first-writer-wins, silently, everywhere
+
+Every loader in this category defaults to leaving an already-set variable alone, and almost none of them says so.
+
+| Tool | Key already in `process.env` | Diagnostic | Override |
+|---|---|---|---|
+| `dotenv` (preload) | file value skipped | **none** — the preload path forces `quiet: true` | `DOTENV_CONFIG_OVERRIDE=true` |
+| `dotenv` (explicit `config()`) | skipped | `injected env (N)` on stderr; N drops but no key is named | same |
+| `@dotenvx/dotenvx` | skipped | count drops; `--verbose` logs `KEY pre-exists` | `--overload` |
+| **Node `--env-file`** | **real env wins** | none | none |
+| **`@next/env`** | skipped — snapshots `process.env` first, plus a `__NEXT_PROCESSED_ENV` re-entry guard | none | internal only |
+| **Vite / SvelteKit / Astro** | ambient `VITE_*` copied in last, wins | none | `envDir: false` |
+| `varlock` | real `process.env` is the top of its precedence chain | validation errors are loud; a shadowed key is not | `@currentEnv` |
+
+SvelteKit and Astro are Vite — all three import the same `loadEnv`. Three brands, one mechanism.
+
+### Everyone silently injects ciphertext
+
+The sharpest instance of the precedence problem, and it is **not** specific to any one tool. Measured against a `.env` carrying a `DOTENV_PUBLIC_KEY` and an `encrypted:` value:
+
+| | result |
+|---|---|
+| `dotenvx run -- node app.mjs` | decrypted correctly |
+| `node -r dotenv/config app.mjs` | `encrypted:BNWf/…` verbatim, exit 0, **silent** |
+| **`node --env-file=.env app.mjs`** | `encrypted:BNWf/…` verbatim, exit 0, **silent** |
+
+**Node's own builtin has the defect too.** dotenv on `master` is adding a warning for exactly this case. Any runtime that eagerly loads `.env` inherits it unless it validates the value shape.
+
+### Two corrections to widely-held premises about `--env-file`
+
+Both measured on Node 26.5.0:
+
+1. **`NODE_OPTIONS` inside a `--env-file` IS parsed and applied, and the preload it names runs.** The docs say so explicitly: *"The environment variables which configure Node.js, such as `NODE_OPTIONS`, are parsed and applied."* There is no disallow-list.
+2. **No variable expansion.** `A=1` followed by `B=${A}-x` yields the literal string `${A}-x`.
+
+Missing file: `--env-file` exits **9** with `not found`; `--env-file-if-exists` continues at exit 0.
+
+### The run-wrapper family
+
+Outside npm, the wrapper shape dominates secret management entirely. Popularity proxy is GitHub stars plus code-search hits for the literal command — ordinal at best, since several are SaaS products with no public CLI repo:
+
+| Tool | Code-search hits | Command |
+|---|---|---|
+| 1Password | **5,640** | `op run --env-file="./prod.env" -- <cmd>` |
+| Doppler | **4,840** | `doppler run -- <cmd>` |
+| Infisical | 2,244 | `infisical run -- <cmd>` |
+| sops | 1,034 | `sops exec-env <file> <cmd>` |
+| fnox | 829 | `fnox exec -- <cmd>` |
+
+`op run` masks secrets in stdout/stderr by default — a capability the preload shape cannot have, since it can only patch in-process writers.
+
+**The wrapper's whole cost is one extra Node boot.** Measured against the same tool's own preload: `dotenvx` 202 ms preloaded vs 283 ms wrapped. Roughly +60–80 ms buys stream redaction and `NODE_OPTIONS` control.
+
+### `varlock/config` fork bombs the same way `auto-load` does
+
+varlock's exports map ships `./config` as a deliberate `-r dotenv/config` drop-in. It inherits [Defect 2](varlock-integration.md): `NODE_OPTIONS="-r varlock/config" node -e '…'` times out at exit 124, while the same specifier passed as an argv `-r` exits 0. Worth folding into the upstream report that doc already contemplates.
+
+### The schema axis is not the preload axis
+
+`@t3-oss/env-core` (4.4M), `@t3-oss/env-nextjs` (3.6M), `envalid` (637K), `env-schema` (486K), `znv` (53K) — none has a `bin` or a `/config` export. They validate an already-loaded `process.env`, compose with any loader, and conflict with none. Combined they are roughly 52× varlock's downloads, which is the honest read of where "schema for env" mindshare sits today — though they solve a strictly smaller problem: no resolution, no secret fetching, no redaction.
+
+Separately, **`dotenv-extended` has owned the `.env.schema` filename since 2016** and is still maintained. Any tool claiming that filename needs a content sniff, not a name match.
+
 ## Upstream will not fix the inheritance problems
 
 - [nodejs/node#47615](https://github.com/nodejs/node/issues/47615), *"Loaders that use childProcess.fork lead to endless recursion of processes"* — filed 2023-04-19, **auto-closed by the stale bot on 2026-07-04 with no fix**. The preload fork bomb is permanently userland's problem.
@@ -238,6 +307,15 @@ The third row needs only one `.cjs` preload entry: nub's own preload is the firs
 
 **A second consideration, from the Bun measurement.** If the `preload:` leak scope (documented as Defect 1 in [varlock-integration.md](varlock-integration.md)) is worth fixing, config-file rediscovery is the shape a peer runtime already ships, and it preserves the in-project script coverage that `NODE_OPTIONS` inheritance is currently load-bearing for.
 
+### What is worth integrating, ranked
+
+1. **A tool-agnostic ciphertext guard — and this outranks every named-tool integration.** Measured on shipped nub 0.6.0 with a project root: an `encrypted:` value alongside a `DOTENV_PUBLIC_KEY` is injected verbatim, exit 0, silent. It needs no knowledge of any specific tool, covers `dotenvx` (9.8M/wk) plus sops-style `ENC[AES256_GCM` and anything not yet invented, and both Node's builtin and dotenv `master` validate the same shape. Already tracked in [varlock-integration.md](varlock-integration.md); this survey is independent evidence it should come first.
+2. **`@dotenvx/dotenvx` detection, same shape as varlock.** At 9.8M/wk it is roughly 58× varlock, and it is a real secrets tool with real correctness stakes. Detection signal is clean: `DOTENV_PUBLIC_KEY` in `.env`, `.env.keys` present, package resolvable. Cost is the same order as varlock's. **Blocker: `dotenvx run` publishes no sentinel** (measured — the child's environment carries no `DOTENV*` marker), so nub could not detect an *outer* `dotenvx run` and would double-resolve. It degrades gracefully rather than breaking, but the durable fix is an upstream ask for a marker. varlock's `__VARLOCK_RUN` / `__VARLOCK_ENV` handoff is unique in this category and is the right precedent to point at.
+3. **Nothing for `dotenv` itself**, despite 167M/wk. It needs nothing in front of the process — no decryption, no redaction, no `NODE_OPTIONS`, no subprocess — and upstream is removing the preload. The one real issue is diagnostic: nub's cascade silently overrides an in-app `import 'dotenv/config'`, so the same file and the same code produce different answers under `node` and under `nub`, with no message from either side.
+4. **Recognize the vault wrappers; never try to front them.** `op run`, `doppler run`, `infisical run`, `sops exec-env` are outer wrappers by design and compose today. nub cannot authenticate to a vault and should not try. The obligation is only that `<tool> run -- nub …` keeps working: do not clobber values nub did not set, and do not re-derive the environment inside the wrapper.
+
+**One structural read.** varlock is the only tool in this category whose preload spawns a subprocess, and therefore the only one that forced the run-wrapper design. Every other preload here is inert and composes fine. So that machinery is not what the category generally demands — the generally-applicable lesson is item 1, which needs no tool knowledge at all and covers more users than every named integration combined.
+
 ## Reproduction
 
 - Download figures: `api.npmjs.org/downloads/point/last-week/<pkg>` — use the **bulk** comma-separated form for unscoped packages; the per-package endpoint rate-limits after roughly four calls.
@@ -248,3 +326,4 @@ The third row needs only one `.cjs` preload entry: nub's own preload is the firs
 ## Changelog
 
 - 2026-08-03 — Initial write-up.
+- 2026-08-03 — Added the env-loader detail: the universal silent first-writer-wins precedence, the ciphertext injection that Node's own `--env-file` shares, the two `--env-file` premise corrections, the run-wrapper family and its measured ~60–80 ms cost, `varlock/config` inheriting the `auto-load` fork bomb, and the schema-validation family being a different shape. Ranked what is worth integrating, with the tool-agnostic ciphertext guard first.
