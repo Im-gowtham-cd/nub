@@ -211,7 +211,7 @@ The OTel figure was bisected, not guessed: `OTEL_SDK_DISABLED=true` → 190 ms; 
 | attached + `OTEL_NODE_RESOURCE_DETECTORS=none` | 7,440 ms | 253 ms |
 | attached + both | 219 ms | 224 ms |
 
-The practical consequence is that **the overwhelming majority of the cost is decidable before the process starts** — whether a collector is reachable, and whether the cloud detectors can possibly succeed — which is a decision a launcher can make and an in-process SDK cannot.
+The practical consequence is that **the overwhelming majority of the cost is decidable before the process starts** — whether a collector is reachable, and whether the cloud detectors can possibly succeed — which is a decision a launcher can make and an in-process SDK cannot. Full decomposition, plus the ESM attach path and the runtime-level prior art: [OpenTelemetry on Node](opentelemetry.md).
 
 ### 4. Consumers that re-parse `NODE_OPTIONS` corrupt repeated flags
 
