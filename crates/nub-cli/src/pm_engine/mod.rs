@@ -1776,6 +1776,10 @@ fn apply_lifecycle_augmentation(cwd: &Path) -> Result<()> {
             None => aug.node_options = Some(configured),
         }
     }
+    // Lifecycle scripts need nothing env-owner-specific here. A script's `node`
+    // resolves through nub's PATH shim and re-enters nub, which detects the owner
+    // and puts the loader in front of that Node itself — so the environment
+    // arrives by the same route as every other nub-launched process.
     let (env_overlay, path_prepends) =
         augmentation_to_lifecycle_overlay(&aug, node.path.as_str(), Some(&runtime_json));
     // The shim dir + provisioned node for the engine's runtime spawn helpers —
