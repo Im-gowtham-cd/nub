@@ -8669,7 +8669,7 @@ fn run_pm_pin(arg: Option<&str>, cwd: &Path) -> Result<i32> {
     println!("pinned nub@{version}");
     println!("  package.json: packageManager = nub@{version}");
     println!(
-        "  package.json: devEngines.packageManager = {{ name: \"nub\", version: \"^{version}\", onFail: \"warn\" }}"
+        "  package.json: devEngines.packageManager = {{ name: \"nub\", version: \"^{version}\", onFail: \"ignore\" }}"
     );
     // A pin at a version other than the running nub is honored by the self-shim,
     // not eagerly: say what happens next, download nothing now.
