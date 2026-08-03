@@ -1,4 +1,4 @@
-# Branch-scoped Windows probe (see .agents/skills/ci-adhoc-test) — NO PR needed.
+# Branch-scoped Windows probe (see .claude/skills/ci-adhoc-test) — NO PR needed.
 # Pushing to the busybox-shell branch runs this on a real windows-latest runner.
 # It builds a real nub, stages busybox.exe next to nub.exe exactly as the win32
 # package lays it out, and drives the integrated `nub run` (production sidecar

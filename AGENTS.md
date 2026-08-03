@@ -4,7 +4,7 @@ Entry point for AI coding agents working in this repo, per the [`AGENTS.md` conv
 
 ## Skills work for EVERY agent, not just Claude (Codex included)
 
-Task playbooks ("skills") live as plain-markdown `SKILL.md` files under `.agents/skills/<name>/SKILL.md`, each with a frontmatter `description` naming when to use it. That path is the canonical one and is deliberately agent-neutral; `.claude/skills` is a symlink to it, so either path works and the two can never drift. Claude Code auto-discovers and auto-triggers them; **Codex and other agents do not** — run `ls .agents/skills/` and read the matching `SKILL.md` before improvising. A skill's steps are authoritative over your default approach for that task. The highest-value ones:
+Task playbooks ("skills") live as plain-markdown `SKILL.md` files under `.claude/skills/<name>/SKILL.md`, each with a frontmatter `description` naming when to use it. **That is the one and only skills directory** — despite the Claude-specific name, every agent reads it. There is no mirror and no symlink: a second copy under `.agents/` drifted silently for weeks and is exactly what `.githooks/pre-push` now refuses. Claude Code auto-discovers and auto-triggers them; **Codex and other agents do not** — run `ls .claude/skills/` and read the matching `SKILL.md` before improvising. A skill's steps are authoritative over your default approach for that task. The highest-value ones:
 
 - **`gcloud-vm`** — provision/start/reach Google Cloud VMs (real Linux-kernel enforcement, real Windows/MSVC/AppContainer, a clean build box). You can CREATE a VM on demand, not just start the standing `nub-linux`/`nub-win`.
 - **`dev-loop`** / **`rust-build`** / **`worktree`** — build & test nub in a worktree: the fast-profile loop, the shared-target-dir contamination hazard, the one-command worktree setup.
@@ -13,7 +13,7 @@ Task playbooks ("skills") live as plain-markdown `SKILL.md` files under `.agents
 - **`release`** — cut a patch release end-to-end. **`address-issue`** — the full issue playbook. **`audit-thread`** / **`sandbox-pentest`** — parity-audit and adversarial-red-team methodology.
 - **`prose-writing`** — required before writing any GitHub comment, doc, or release note. Also **`benchmarking`**, **`pm-perf-tracing`**, **`impact-analysis`**, **`aube-bump`**, **`git-archaeology`**, **`md-toc`**, **`soak`**.
 
-`.agents/skills/*` is this repo's own agent tooling; the "agent-agnostic, never overfit to Claude" rule governs copy that ships to *users'* agents, not these playbooks.
+`.claude/skills/*` is this repo's own agent tooling; the "agent-agnostic, never overfit to Claude" rule governs copy that ships to *users'* agents, not these playbooks.
 
 When present, `AGENTS.local.md` (gitignored, not in a clean checkout) adds maintainer-local orientation — orchestration workflow, dispatch policy, pointers into local-only directories. It is an optional overlay; this file is self-sufficient without it.
 
@@ -311,7 +311,7 @@ Visual structure never replaces the host application's control syntax. In Fray, 
 
 **Any general copy-style feedback gets applied everywhere it applies, not just where it was raised** — and gets recorded in `PROSE.md`, not here. Dispatch a sweep of all docs (plus homepage/blog where relevant), then add the rule to the shared guide.
 
-**User-facing AGENT instructions must be coding-agent-agnostic.** Any copy an arbitrary coding agent reads and *executes* — `start.md`, the `nub agent skill` output, docs that tell an agent to do something — must accommodate every coding agent (Claude Code, Cursor, Codex/Copilot, Cline, …). Each stores standing instructions differently (`.claude/skills/<name>/SKILL.md`, `.cursor/rules/`, `AGENTS.md`, `.github/copilot-instructions.md`). Never hardcode a Claude-specific path as THE target; instruct the running agent to follow its own conventions and the repo's existing layout. A Claude path may appear only as one example among several. Keep `nub agent skill` / `https://nubjs.com/skill.md` as the agent-neutral source. (This does not govern this repo's own `.agents/skills/*`.)
+**User-facing AGENT instructions must be coding-agent-agnostic.** Any copy an arbitrary coding agent reads and *executes* — `start.md`, the `nub agent skill` output, docs that tell an agent to do something — must accommodate every coding agent (Claude Code, Cursor, Codex/Copilot, Cline, …). Each stores standing instructions differently (`.claude/skills/<name>/SKILL.md`, `.cursor/rules/`, `AGENTS.md`, `.github/copilot-instructions.md`). Never hardcode a Claude-specific path as THE target; instruct the running agent to follow its own conventions and the repo's existing layout. A Claude path may appear only as one example among several. Keep `nub agent skill` / `https://nubjs.com/skill.md` as the agent-neutral source. (This does not govern this repo's own `.claude/skills/*`.)
 
 ### nub docs specifics (`site/content/docs/`)
 
@@ -336,7 +336,7 @@ General structure rules live in [`PROSE.md`](PROSE.md). The homepage is the cano
 
 ## Markdown navigation — line-range TOC for large files
 
-Before loading a large markdown file in full, run `node scripts/md-toc/index.mjs <file.md>` (or `nub scripts/md-toc/index.mjs <file.md>`) for a heading TOC with exact line ranges, then `Read` only the section you need via `offset`/`limit`. Full usage: `.agents/skills/md-toc/SKILL.md`.
+Before loading a large markdown file in full, run `node scripts/md-toc/index.mjs <file.md>` (or `nub scripts/md-toc/index.mjs <file.md>`) for a heading TOC with exact line ranges, then `Read` only the section you need via `offset`/`limit`. Full usage: `.claude/skills/md-toc/SKILL.md`.
 
 ## Releasing
 

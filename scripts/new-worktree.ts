@@ -26,7 +26,7 @@
 //      when two worktrees diverge the SAME depended-on crate (e.g. vendor/aube on
 //      different branches), so rust-build.sh shares by default and auto-isolates
 //      to a private target dir the moment THIS worktree diverges such a crate.
-//      See .agents/skills/rust-build/SKILL.md. (Bare `cargo` + a hardcoded shared
+//      See .claude/skills/rust-build/SKILL.md. (Bare `cargo` + a hardcoded shared
 //      CARGO_TARGET_DIR still works but risks that contamination — prefer the
 //      wrapper.)
 

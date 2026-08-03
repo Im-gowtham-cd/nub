@@ -59,10 +59,10 @@ Cause is almost always TWO builds on ONE target dir — most often a stopped age
 
 ```sh
 # Audit only. This is the default.
-python3 .agents/skills/cpu-reduction/scripts/clean-worktree-targets.py
+python3 .claude/skills/cpu-reduction/scripts/clean-worktree-targets.py
 
 # Repeat every safety check, then delete eligible build output.
-python3 .agents/skills/cpu-reduction/scripts/clean-worktree-targets.py --apply
+python3 .claude/skills/cpu-reduction/scripts/clean-worktree-targets.py --apply
 ```
 
 It deletes no worktree, branch, source file, or shared cache. Layouts it covers:

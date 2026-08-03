@@ -54,7 +54,7 @@
 # crates/nub-phantom (bin, own workspace). NOTE nub-phantom-core and
 # nub-phantom-scan are NOT leaves — nub-cli depends on both — and the git pathspec
 # ':(exclude)crates/nub-phantom' matches only that directory, not those siblings
-# (verified). See .agents/skills/rust-build/SKILL.md for the full model.
+# (verified). See .claude/skills/rust-build/SKILL.md for the full model.
 
 set -eu
 
